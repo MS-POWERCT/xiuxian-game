@@ -1,0 +1,32 @@
+{
+  "stages": [
+    {
+      "to_realm": "zhuji",
+      "name": "突破筑基",
+      "fail_rate": 0.30,
+      "exp_rollback_ratio": 0.50,
+      "hp_loss": 30
+    },
+    {
+      "to_realm": "jindan",
+      "name": "突破金丹",
+      "fail_rate": 0.40,
+      "exp_rollback_ratio": 0.50,
+      "hp_loss": 30
+    },
+    {
+      "to_realm": "yuanying",
+      "name": "突破元婴",
+      "fail_rate": 0.50,
+      "exp_rollback_ratio": 0.60,
+      "hp_loss": 40
+    },
+    {
+      "to_realm": "huashen",
+      "name": "突破化神",
+      "fail_rate": 0.60,
+      "exp_rollback_ratio": 0.60,
+      "hp_loss": 40
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "pills": [
+    {
+      "id": "peiyuan_dan",
+      "name": "培元丹",
+      "effect_type": "closing_buff",
+      "effect_value": 0.10,
+      "price": 100,
+      "unlock_realm": "qi",
+      "max_per_retreat": 5
+    },
+    {
+      "id": "jingyuan_dan",
+      "name": "精元丹",
+      "effect_type": "closing_buff",
+      "effect_value": 0.25,
+      "price": 300,
+      "unlock_realm": "zhuji",
+      "max_per_retreat": 5
+    },
+    {
+      "id": "huichun_dan",
+      "name": "回春丹",
+      "effect_type": "heal",
+      "effect_value": 30,
+      "price": 150,
+      "unlock_realm": "qi",
+      "max_per_retreat": null
+    },
+    {
+      "id": "yanshou_dan",
+      "name": "延寿丹",
+      "effect_type": "lifespan",
+      "effect_value": null,
+      "price": 5000,
+      "unlock_realm": "qi",
+      "max_per_retreat": null,
+      "effect_by_use": [10, 5, 2, 1, 0],
+      "price_by_use": [5000, 10000, 20000, 40000]
+    }
+  ]
+}

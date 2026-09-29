@@ -1,0 +1,53 @@
+{
+  "time_ratio": {
+    "real_day_to_game_year": 2
+  },
+  "start_age_years": 16,
+  "realms": [
+    {
+      "id": "qi",
+      "name": "练气",
+      "order": 1,
+      "lifespan_years": 80,
+      "cultivate_rate": 1.0,
+      "stages": ["一层", "二层", "三层", "四层", "五层", "六层", "七层", "八层", "九层"],
+      "exp_to_next": [100, 150, 225, 340, 510, 765, 1150, 1725, 2600]
+    },
+    {
+      "id": "zhuji",
+      "name": "筑基",
+      "order": 2,
+      "lifespan_years": 200,
+      "cultivate_rate": 0.8,
+      "stages": ["初期", "中期", "后期", "大圆满"],
+      "exp_to_next": [6000, 9000, 13500, 20000]
+    },
+    {
+      "id": "jindan",
+      "name": "金丹",
+      "order": 3,
+      "lifespan_years": 500,
+      "cultivate_rate": 0.5,
+      "stages": ["初期", "中期", "后期", "大圆满"],
+      "exp_to_next": [30000, 45000, 67500, 100000]
+    },
+    {
+      "id": "yuanying",
+      "name": "元婴",
+      "order": 4,
+      "lifespan_years": 1000,
+      "cultivate_rate": 0.3,
+      "stages": ["初期", "中期", "后期", "大圆满"],
+      "exp_to_next": [150000, 225000, 335000, 500000]
+    },
+    {
+      "id": "huashen",
+      "name": "化神",
+      "order": 5,
+      "lifespan_years": 2000,
+      "cultivate_rate": 0.2,
+      "stages": ["初期", "中期", "后期", "大圆满"],
+      "exp_to_next": [750000, 1100000, 1650000, 2500000]
+    }
+  ]
+}

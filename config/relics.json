@@ -1,0 +1,34 @@
+{
+  "results": [
+    {
+      "id": "great_fortune",
+      "name": "大机缘",
+      "probability": 0.15,
+      "reward": "灵石 500-1000 / 稀有功法"
+    },
+    {
+      "id": "small_fortune",
+      "name": "小机缘",
+      "probability": 0.35,
+      "reward": "灵石 100-500 / 丹药"
+    },
+    {
+      "id": "nothing",
+      "name": "无惊无险",
+      "probability": 0.35,
+      "reward": "少量灵石"
+    },
+    {
+      "id": "wounded",
+      "name": "受伤",
+      "probability": 0.10,
+      "reward": "气血 -30"
+    },
+    {
+      "id": "death",
+      "name": "陨落",
+      "probability": 0.05,
+      "reward": "死亡（可用替死符）"
+    }
+  ]
+}

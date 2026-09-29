@@ -1,0 +1,30 @@
+# ===== 通用 =====
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+!.env.example
+
+# 编辑器 / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ===== 前端（Vue 3 + Vite + TypeScript） =====
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+coverage/
+.eslintcache
+
+# ===== 后端（PHP 8 + Webman） =====
+vendor/
+composer.phar
+runtime/
+storage/logs/
+*.sqlite
+.php-cs-fixer.cache

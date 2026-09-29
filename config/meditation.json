@@ -1,0 +1,32 @@
+{
+  "meditations": [
+    {
+      "id": "meditate_short",
+      "name": "冥想",
+      "duration_seconds": 30,
+      "base_exp": 5
+    },
+    {
+      "id": "meditate_deep",
+      "name": "深度冥想",
+      "duration_seconds": 300,
+      "base_exp": 40
+    }
+  ],
+  "retreats": [
+    {
+      "id": "retreat_24h",
+      "name": "闭关·一日",
+      "duration_hours": 24,
+      "base_exp": 2500
+    },
+    {
+      "id": "retreat_48h",
+      "name": "闭关·两日",
+      "duration_hours": 48,
+      "base_exp": 5000
+    }
+  ],
+  "retreat_buff_cap": 1.0,
+  "retreat_early_exit_ratio": 0.5
+}

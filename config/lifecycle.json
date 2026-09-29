@@ -1,0 +1,24 @@
+{
+  "hp": {
+    "max": 100,
+    "rest_recovery_per_day": 10,
+    "injury_thresholds": [
+      { "below": 80, "cultivate_rate_penalty": 0.20 },
+      { "below": 50, "cultivate_rate_penalty": 0.20 }
+    ]
+  },
+  "reincarnation": {
+    "restart_age": 16,
+    "max_reincarnations_per_day": 3,
+    "cultivate_speed_bonus_per_realm": 0.15,
+    "cultivate_speed_bonus_cap": 1.00,
+    "inherit_spirit_stone_ratio": 0.10,
+    "inherit_technique_count": 1
+  },
+  "age_preset": [
+    { "age": 16, "cultivate_rate": 1.00, "initial_spirit_stones": 0, "lifespan_pills": 0 },
+    { "age": 25, "cultivate_rate": 1.10, "initial_spirit_stones": 500, "lifespan_pills": 0 },
+    { "age": 40, "cultivate_rate": 1.25, "initial_spirit_stones": 2000, "lifespan_pills": 2 },
+    { "age": 60, "cultivate_rate": 1.50, "initial_spirit_stones": 5000, "lifespan_pills": 5 }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "bgm": {
+    "main": { "src": "/audio/bgm/main.mp3", "loop": true }
+  },
+  "sfx": {
+    "click": { "src": "/audio/sfx/click.wav" },
+    "meditate_start": { "src": "/audio/sfx/meditate_start.wav" },
+    "meditate_done": { "src": "/audio/sfx/meditate_done.wav" },
+    "retreat_start": { "src": "/audio/sfx/retreat_start.wav" },
+    "retreat_done": { "src": "/audio/sfx/retreat_done.wav" },
+    "breakthrough": { "src": "/audio/sfx/breakthrough.wav" }
+  }
+}

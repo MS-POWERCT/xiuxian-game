@@ -1,0 +1,28 @@
+{
+  "formations": [
+    {
+      "id": "juling_small",
+      "name": "聚灵阵(小)",
+      "effect_type": "closing_buff",
+      "effect_value": 0.10,
+      "cost_per_use": 200,
+      "unlock_realm": "qi"
+    },
+    {
+      "id": "juling_large",
+      "name": "聚灵阵(大)",
+      "effect_type": "closing_buff",
+      "effect_value": 0.25,
+      "cost_per_use": 500,
+      "unlock_realm": "zhuji"
+    },
+    {
+      "id": "hushen",
+      "name": "护神阵",
+      "effect_type": "reduce_deviation",
+      "effect_value": 0.50,
+      "cost_per_use": 300,
+      "unlock_realm": "jindan"
+    }
+  ]
+}

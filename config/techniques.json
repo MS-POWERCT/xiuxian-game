@@ -1,0 +1,28 @@
+{
+  "techniques": [
+    {
+      "id": "tuna",
+      "name": "吐纳术",
+      "closing_efficiency": 1.0,
+      "unlock_realm": null
+    },
+    {
+      "id": "changchun",
+      "name": "长春功",
+      "closing_efficiency": 1.2,
+      "unlock_realm": "zhuji"
+    },
+    {
+      "id": "xuanyuan",
+      "name": "玄元诀",
+      "closing_efficiency": 1.5,
+      "unlock_realm": "jindan"
+    },
+    {
+      "id": "taiyi",
+      "name": "太一经",
+      "closing_efficiency": 2.0,
+      "unlock_realm": "yuanying"
+    }
+  ]
+}

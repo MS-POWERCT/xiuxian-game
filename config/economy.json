@@ -1,0 +1,16 @@
+{
+  "breakthrough_reward": {
+    "zhuji": 1000,
+    "jindan": 3000,
+    "yuanying": 8000,
+    "huashen": 20000
+  },
+  "relic_spirit_stone_range": {
+    "min": 100,
+    "max": 1000
+  },
+  "daily_login_reward": {
+    "min": 50,
+    "max": 200
+  }
+}
