@@ -6,7 +6,7 @@ use app\services\GameService;
 use support\Request;
 
 /**
- * 最小闭环控制器：冥想 / 闭关 / 渡劫突破（薄壳，业务逻辑在 app/services/GameService.php）
+ * 核心玩法控制器：悟道 / 冥想 / 闭关 / 渡劫突破（薄壳，业务逻辑在 app/services/GameService.php）
  * 严格依据 docs/api.md。
  */
 class GameController
@@ -24,6 +24,11 @@ class GameController
     public function meditateClaim(Request $request): \Webman\Http\Response
     {
         return (new GameService())->meditateClaim($request);
+    }
+
+    public function dazuo(Request $request): \Webman\Http\Response
+    {
+        return (new GameService())->dazuo($request);
     }
 
     public function retreatStart(Request $request): \Webman\Http\Response

@@ -1,6 +1,6 @@
 # 数据库设计
 
-> 规则数值不存数据库，统一放 `config/*.json`。数据库只存「玩家运行时状态」。
+> 规则数值不存数据库，统一放 `config/*.json`。数据库只存「玩家运行时状态」与「后台安全审计数据」。
 > 字符集 `utf8mb4`，时间戳统一秒级 Unix 整数（命名 `*_at`）。
 
 ---
@@ -13,8 +13,11 @@
 | players               | 玩家角色状态（核心）        |
 | retreats              | 闭关记录                    |
 | reincarnation_records | 前世档案（转世/死亡时快照） |
+| admin_users           | 后台管理员账号              |
+| admin_login_logs      | 后台登录、失败和锁定审计    |
+| admin_operation_logs  | 后台敏感操作审计            |
 
-> 雏形阶段用这四张表。遗迹记录、排行榜等暂时不上，玩法确定后再加。
+> 玩家运行时状态与后台安全审计分开；后台表仅服务管理端，不参与游戏数值计算。
 
 ---
 
@@ -22,10 +25,15 @@
 
 | 字段         | 类型               | 说明                                        |
 | ------------ | ------------------ | ------------------------------------------- |
-| id           | BIGINT UNSIGNED PK | 自增                                        |
-| realname_age | TINYINT NULL       | 实名接口取到的真实年龄（未成年可能为 NULL） |
-| created_at   | INT UNSIGNED       | 注册时间（秒）                              |
-| updated_at   | INT UNSIGNED       | 更新时间（秒）                              |
+| id                 | BIGINT UNSIGNED PK | 自增                                        |
+| email              | VARCHAR(255)       | 登录邮箱，唯一索引                          |
+| password_hash      | VARCHAR(255)       | bcrypt 密码哈希，绝不明文                   |
+| realname_age       | TINYINT NULL       | 实名接口取到的真实年龄（未成年可能为 NULL） |
+| auth_token         | VARCHAR(64) NULL   | 玩家登录令牌                                |
+| token_expires_at   | INT UNSIGNED NULL  | 玩家令牌过期时间                            |
+| realname_bound_at  | INT UNSIGNED NULL  | 实名绑定时间                                |
+| created_at         | INT UNSIGNED       | 注册时间（秒）                              |
+| updated_at         | INT UNSIGNED       | 更新时间（秒）                              |
 
 **规则：不存原始身份证号**，只存年龄。
 
@@ -118,7 +126,43 @@
 
 ---
 
-## 六、索引建议
+## 六、后台管理表
+
+### admin_users（管理员账号）
+
+| 字段                     | 类型               | 说明                                      |
+| ------------------------ | ------------------ | ----------------------------------------- |
+| id                       | BIGINT UNSIGNED PK | 自增                                      |
+| username                 | VARCHAR(32)        | 唯一管理员账号                            |
+| password_hash            | VARCHAR(255)       | bcrypt 密码哈希，绝不明文                 |
+| is_enabled               | TINYINT(1)         | 是否启用                                  |
+| auth_token_hash          | CHAR(64) NULL      | 后台登录令牌的 SHA-256 哈希，不存原文     |
+| auth_token_expires_at    | INT UNSIGNED NULL  | 后台令牌过期时间                          |
+| failed_login_count       | TINYINT UNSIGNED   | 连续登录失败次数                          |
+| locked_until             | INT UNSIGNED NULL  | 登录锁定截止时间                          |
+| sensitive_fail_count     | TINYINT UNSIGNED   | 敏感操作密码连续失败次数                  |
+| sensitive_locked_until   | INT UNSIGNED NULL  | 敏感操作锁定截止时间                      |
+| last_login_at            | INT UNSIGNED NULL  | 最后登录时间                              |
+| last_login_ip            | VARCHAR(45) NULL   | 最后登录 IP                               |
+| created_at / updated_at  | INT UNSIGNED       | 创建、更新时间（秒）                      |
+
+### admin_login_logs（管理员登录审计）
+
+记录每次登录成功、失败、锁定检查的账号、IP、User-Agent 和时间。用于排查暴力破解与异常登录。
+
+### admin_operation_logs（管理员操作审计）
+
+记录后台配置保存、配置恢复、退出等敏感操作。字段包含管理员 id、动作、目标、操作原因、操作摘要、IP、User-Agent 和时间。
+
+### 后台安全规则
+
+- `admin_token` 和 `admin_csrf` 均使用 HttpOnly Cookie，不进入前端 localStorage。
+- 后台写操作必须通过 CSRF 校验；配置写入与恢复还必须二次确认管理员密码。
+- 数据表浏览只读，且只允许固定白名单表；敏感列由服务端脱敏。
+
+---
+
+## 七、索引建议
 
 - `players.user_id` 建唯一索引（一个账号一个角色）
 - `retreats.player_id` + `retreats.status` 建联合索引
@@ -126,7 +170,7 @@
 
 ---
 
-## 七、待定（雏形不含）
+## 八、待定（雏形不含）
 
 - 遗迹探索记录表
 - 排行榜表

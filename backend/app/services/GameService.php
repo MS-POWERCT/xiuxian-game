@@ -9,7 +9,7 @@ use support\Redis;
 use support\Request;
 
 /**
- * 最小闭环服务层：冥想 / 闭关 / 渡劫突破（严格依据 docs/api.md）
+ * 核心玩法服务层：悟道 / 冥想 / 闭关 / 渡劫突破（严格依据 docs/api.md）
  * 所有数值来自 config/*.json，逻辑层不硬编码任何数值。
  */
 class GameService
@@ -26,6 +26,7 @@ class GameService
 
     // 动作 → 允许的玩家状态（集中定义，避免各接口各写一套互斥判断）
     private const ACTION_STATUS = [
+        'dazuo' => ['idle', 'meditating', 'retreating', 'exploring'],
         'meditate' => ['idle'],
         'meditate_claim' => ['meditating'],
         'retreat' => ['idle'],
@@ -98,6 +99,7 @@ class GameService
             'player' => $this->playerDto($row),
             'retreat' => $retreat ? $this->retreatDto($retreat) : null,
             'meditation' => $meditation ? $this->meditationDto($row) : null,
+            'dazuo' => $this->dazuoState($row),
         ]);
     }
 
@@ -107,7 +109,9 @@ class GameService
         if ($userId === null) {
             return $this->fail(5005, '未登录或登录已失效');
         }
-        $duration = (int)$request->input('duration', 30);
+        $meditationConfig = GameConfig::get('meditation');
+        $defaultDuration = (int)($meditationConfig['meditation_durations'][0] ?? 180);
+        $duration = (int)$request->input('duration', $defaultDuration);
         $med = $this->findMeditation($duration);
         if ($med === null) {
             return $this->fail(1000, '无效的冥想时长');
@@ -123,7 +127,14 @@ class GameService
         $ageRate = $this->cultivateRate((int)$row['age']);
 
         // 修为 = base_exp × 境界效率 × 年龄补偿 × 转世速度加成（时长差异已含在 base_exp 中）
-        $gained = (int)round((float)$med['base_exp'] * (float)$realm['cultivate_rate'] * $ageRate * (1 + $this->speedBonus($row)));
+        $meditationRatio = (float)($meditationConfig['meditation_exp_ratio'] ?? 1.0);
+        $gained = (int)round(
+            (float)$med['base_exp']
+                * $meditationRatio
+                * (float)$realm['cultivate_rate']
+                * $ageRate
+                * (1 + $this->speedBonus($row))
+        );
         $now = time();
         $finishAt = $now + $duration;
         $stmt = Db::pdo()->prepare(
@@ -196,6 +207,69 @@ class GameService
         $row['meditation_duration'] = null;
         $row['meditation_expected_exp'] = null;
         return $this->ok(['gained_exp' => $gained, 'player' => $this->playerDto($row)]);
+    }
+
+    public function dazuo(Request $request): \Webman\Http\Response
+    {
+        $userId = $this->authUserId($request);
+        if ($userId === null) {
+            return $this->fail(5005, '未登录或登录已失效');
+        }
+
+        $config = GameConfig::get('meditation');
+        $batchSize = (int)$config['dazuo_batch_size'];
+        $count = (int)$request->input('count', 0);
+        if ($count !== $batchSize) {
+            return $this->fail(1000, '悟道次数不足');
+        }
+
+        $row = $this->playerRow($userId);
+        if ($res = $this->guard($row, 'dazuo')) {
+            return $res;
+        }
+
+        $dailyLimit = (int)$config['dazuo_daily_limit'];
+        $dailyKey = $this->dazuoDailyKey($row);
+        $dailyUsed = $this->dazuoDailyUsed($row);
+        if ($dailyLimit > 0 && $dailyUsed + $count > $dailyLimit) {
+            return $this->fail(4003, '今日悟道次数已达上限');
+        }
+
+        $cooldownMs = (int)$config['dazuo_cooldown_ms'];
+        $cooldownKey = 'xiuxian:dazuo:cooldown:' . (int)$row['id'] . ':' . (int)($row['life_no'] ?? 1);
+        if ($cooldownMs > 0) {
+            $acquired = Redis::connection()->client()->set($cooldownKey, '1', ['NX', 'PX' => $cooldownMs]);
+            if (!$acquired) {
+                return $this->fail(4004, '悟道尚未冷却');
+            }
+        }
+
+        $dailyUsed = (int)Redis::incrBy($dailyKey, $count);
+        Redis::expire($dailyKey, 2 * 86400);
+        if ($dailyLimit > 0 && $dailyUsed > $dailyLimit) {
+            Redis::decrBy($dailyKey, $count);
+            if ($cooldownMs > 0) {
+                Redis::del($cooldownKey);
+            }
+            return $this->fail(4003, '今日悟道次数已达上限');
+        }
+
+        $realm = $this->realmConfig($row['realm_id']);
+        $unitExp = (float)$config['dazuo_base_exp']
+            * (float)$realm['cultivate_rate']
+            * $this->cultivateRate((int)$row['age'])
+            * (1 + $this->speedBonus($row));
+        $gained = (int)round($unitExp * $count);
+        $this->addExp($row, $realm, $gained);
+        $this->savePlayerRow($row);
+
+        return $this->ok([
+            'gained_exp' => $gained,
+            'batch_size' => $batchSize,
+            'daily_used' => $dailyUsed,
+            'daily_limit' => $dailyLimit,
+            'player' => $this->playerDto($row),
+        ]);
     }
 
     public function retreatStart(Request $request): \Webman\Http\Response
@@ -845,6 +919,26 @@ class GameService
         return ($row['status'] ?? '') === 'meditating' && !empty($row['meditation_finish_at']);
     }
 
+    private function dazuoDailyKey(array $row): string
+    {
+        return 'xiuxian:dazuo:' . date('Y-m-d') . ':' . (int)$row['id'] . ':' . (int)($row['life_no'] ?? 1);
+    }
+
+    private function dazuoDailyUsed(array $row): int
+    {
+        return (int)Redis::get($this->dazuoDailyKey($row));
+    }
+
+    private function dazuoState(array $row): array
+    {
+        $config = GameConfig::get('meditation');
+        return [
+            'daily_used' => $this->dazuoDailyUsed($row),
+            'daily_limit' => (int)$config['dazuo_daily_limit'],
+            'batch_size' => (int)$config['dazuo_batch_size'],
+        ];
+    }
+
     private function getRetreat(int $retreatId): ?array
     {
         $stmt = Db::pdo()->prepare('SELECT * FROM retreats WHERE id=?');
@@ -863,6 +957,7 @@ class GameService
     {
         return [
             'retreat_id' => (int)$retreat['id'],
+            'start_at' => (int)$retreat['created_at'],
             'finish_at' => (int)$retreat['finish_at'],
             'expected_exp' => (int)$retreat['expected_exp'],
             'status' => (int)$retreat['status'],

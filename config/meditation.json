@@ -1,16 +1,23 @@
 {
+  "dazuo_base_exp": 1,
+  "dazuo_batch_size": 5,
+  "dazuo_daily_limit": 200,
+  "dazuo_click_interval_ms": 20,
+  "dazuo_cooldown_ms": 0,
+  "meditation_durations": [180, 1200],
+  "meditation_exp_ratio": 1.0,
   "meditations": [
     {
       "id": "meditate_short",
       "name": "冥想",
-      "duration_seconds": 30,
-      "base_exp": 5
+      "duration_seconds": 180,
+      "base_exp": 30
     },
     {
       "id": "meditate_deep",
       "name": "深度冥想",
-      "duration_seconds": 300,
-      "base_exp": 40
+      "duration_seconds": 1200,
+      "base_exp": 200
     }
   ],
   "retreats": [

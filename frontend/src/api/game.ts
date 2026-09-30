@@ -38,6 +38,7 @@ export interface ReincarnationRecord {
 
 export interface ActiveRetreat {
   retreat_id: number
+  start_at: number
   finish_at: number
   expected_exp: number
   status: number
@@ -48,6 +49,12 @@ export interface ActiveMeditation {
   finish_at: number
   duration: number
   expected_exp: number
+}
+
+export interface DazuoState {
+  daily_used: number
+  daily_limit: number
+  batch_size: number
 }
 
 export interface RetreatStartPayload {
@@ -62,6 +69,7 @@ export function getPlayer() {
     player: Player
     retreat: ActiveRetreat | null
     meditation: ActiveMeditation | null
+    dazuo: DazuoState
   }>('/player')
 }
 export function startMeditation(duration: number) {
@@ -73,6 +81,15 @@ export function startMeditation(duration: number) {
 }
 export function claimMeditation() {
   return http.post<{ gained_exp: number; player: Player }>('/meditate/claim', {})
+}
+export function dazuo(count: number) {
+  return http.post<{
+    gained_exp: number
+    batch_size: number
+    daily_used: number
+    daily_limit: number
+    player: Player
+  }>('/dazuo', { count })
 }
 export function startRetreat(payload: RetreatStartPayload) {
   return http.post<{ retreat_id: number; finish_at: number; expected_exp: number }>('/retreat/start', payload)

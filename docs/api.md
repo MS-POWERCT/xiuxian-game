@@ -55,6 +55,7 @@
 
 | 动作                     | 允许状态    |
 | ------------------------ | ----------- |
+| 悟道 `dazuo`             | idle / meditating / retreating / exploring |
 | 开始冥想 `meditate`       | idle        |
 | 结算冥想 `meditate/claim` | meditating  |
 | 开始闭关 `retreat/start`  | idle        |
@@ -65,9 +66,10 @@
 
 规则：
 
-- **冥想中（meditating）禁止**：再次冥想、闭关、探索、突破
-- **闭关中（retreating）禁止**：冥想、再次闭关、探索、突破
-- **死后（dead）禁止**：冥想、闭关、探索、突破，仅允许转世
+- **冥想中（meditating）禁止**：再次冥想、闭关、探索、突破；悟道不受限制
+- **闭关中（retreating）禁止**：冥想、再次闭关、探索、突破；悟道不受限制
+- **死后（dead）禁止**：悟道、冥想、闭关、探索、突破，仅允许转世
+- 悟道是即时动作，不改变玩家当前状态，也不与冥想、闭关、探索互斥
 - 校验由后端统一集中处理（入口 `guard`），前端禁用按钮仅作体验优化，真正拦截以后端为准
 
 ---
@@ -97,10 +99,11 @@
 
 `GET /api/player`
 
-响应 data：`{ "player": { ... }, "retreat": {...} | null, "meditation": {...} | null }`
+响应 data：`{ "player": { ... }, "retreat": {...} | null, "meditation": {...} | null, "dazuo": {...} }`
 
-- `retreat`：当前进行中的闭关（`status = 0`），无则 `null`。字段：`{ retreat_id, finish_at, expected_exp, status }`
+- `retreat`：当前进行中的闭关（`status = 0`），无则 `null`。字段：`{ retreat_id, start_at, finish_at, expected_exp, status }`
 - `meditation`：当前进行中的冥想，无则 `null`。字段：`{ start_at, finish_at, duration, expected_exp }`
+- `dazuo`：今日悟道状态，字段：`{ daily_used, daily_limit, batch_size }`
 
 业务规则：
 
@@ -116,22 +119,22 @@
 请求：
 
 ```json
-{ "duration": 30 }
+{ "duration": 180 }
 ```
 
-- `duration`：冥想时长（秒），可选 30 / 300；未传时默认 30
+- `duration`：冥想时长（秒），可选 180 / 1200；未传时默认 180
 
 响应 data：
 
 ```json
 {
-  "expected_exp": 5,
+  "expected_exp": 30,
   "player": { ... },
   "meditation": {
     "start_at": 1735560000,
-    "finish_at": 1735560030,
-    "duration": 30,
-    "expected_exp": 5
+    "finish_at": 1735560180,
+    "duration": 180,
+    "expected_exp": 30
   }
 }
 ```
@@ -139,7 +142,7 @@
 业务规则：
 
 - 开始后玩家状态变为 `meditating`，服务端保存开始时间、结束时间和预计收益
-- 预计收益 = `base_exp × realm.cultivate_rate × age.cultivate_rate × (1 + speed_bonus)`
+- 预计收益 = `base_exp × meditation_exp_ratio × realm.cultivate_rate × age.cultivate_rate × (1 + speed_bonus)`
 - `base_exp` 取自 `config/meditation.json`
 - 境界效率与年龄系数分别取自 `config/realms.json`、`config/lifecycle.json`
 
@@ -178,7 +181,49 @@
 
 ---
 
-### 4. 开始闭关
+### 4. 悟道（即时微收益）
+
+`POST /api/dazuo`
+
+请求：
+
+```json
+{ "count": 5 }
+```
+
+- `count`：本次提交的点击次数，必须等于 `config/meditation.json` 的 `dazuo_batch_size`
+
+响应 data：
+
+```json
+{
+  "gained_exp": 10,
+  "batch_size": 5,
+  "daily_used": 5,
+  "daily_limit": 300,
+  "player": { ... }
+}
+```
+
+业务规则：
+
+- 前端每次点击只在本地计数，不请求接口；累计满 `dazuo_batch_size` 后才提交一次
+- 后端只接受完整批次，按批次一次性结算修为
+- 批次收益 = `dazuo_base_exp × count × realm.cultivate_rate × age.cultivate_rate × (1 + speed_bonus)`
+- 每日上限按点击次数统计，使用 Redis 按「玩家 + 当前世」累计；转世后当前世重新计算，`dazuo_daily_limit` 为 0 时不限制
+- `dazuo_cooldown_ms` 大于 0 时，两次批次结算之间受 Redis 短期冷却限制
+- `dazuo_click_interval_ms` 只控制前端按钮响应间隔，不参与修为计算
+
+错误码：
+
+- `1000` 提交次数不完整
+- `1003` 当前状态不允许该操作（dead 状态禁止悟道）
+- `4003` 今日悟道次数已达上限
+- `4004` 悟道尚未冷却
+
+---
+
+### 5. 开始闭关
 
 `POST /api/retreat/start`
 
@@ -219,7 +264,7 @@
 
 ---
 
-### 5. 结算闭关
+### 6. 结算闭关
 
 `POST /api/retreat/claim`
 
@@ -247,7 +292,7 @@
 
 ---
 
-### 6. 渡劫突破
+### 7. 渡劫突破
 
 `POST /api/breakthrough`
 
@@ -277,7 +322,7 @@
 
 ---
 
-### 7. 遗迹探索
+### 8. 遗迹探索
 
 `POST /api/relic`
 
@@ -300,7 +345,7 @@
 
 ---
 
-### 8. 转世重修 / 主动兵解
+### 9. 转世重修 / 主动兵解
 
 `POST /api/reincarnate`
 
@@ -329,7 +374,7 @@
 
 ---
 
-### 9. 邮箱注册
+### 10. 邮箱注册
 
 `POST /api/auth/register`
 
@@ -359,7 +404,7 @@
 
 ---
 
-### 10. 邮箱登录
+### 11. 邮箱登录
 
 `POST /api/auth/login`
 
@@ -390,7 +435,7 @@
 
 ---
 
-### 11. 绑定身份证（计算年龄）
+### 12. 绑定身份证（计算年龄）
 
 `POST /api/auth/bind-idcard`
 
@@ -428,7 +473,7 @@
 
 ---
 
-### 12. 前世档案列表
+### 13. 前世档案列表
 
 `GET /api/reincarnate/records`
 
@@ -466,7 +511,361 @@
 
 ---
 
-## 三、未尽事项
+## 三、后台管理接口
+
+> 后台接口只允许管理员使用，前缀统一为 `/api/admin`，不得与玩家接口复用登录态。
+> 管理员会话使用 HttpOnly Cookie：`admin_token`（认证）与 `admin_csrf`（CSRF 校验）。
+> 除 `GET` 外，所有后台请求必须携带 `X-CSRF-Token`，其值与 `admin_csrf` Cookie 一致。
+> 配置写入与恢复属于敏感操作，还必须提交管理员密码和操作原因。
+
+### 1. 获取 CSRF Token
+
+`GET /api/admin/auth/csrf`
+
+响应 data：
+
+```json
+{ "csrf_token": "…" }
+```
+
+业务规则：
+
+- 服务端设置 `admin_csrf` HttpOnly Cookie；前端只在内存中保存返回的 token，并用于后续非 GET 请求头。
+- CSRF Token 不用于身份认证，登录接口也必须先调用本接口。
+
+---
+
+### 2. 管理员登录
+
+`POST /api/admin/auth/login`
+
+请求头：`X-CSRF-Token: <csrf_token>`
+
+请求：
+
+```json
+{ "username": "admin", "password": "管理员密码" }
+```
+
+响应 data：
+
+```json
+{
+  "admin": { "id": 1, "username": "admin" },
+  "csrf_token": "…"
+}
+```
+
+业务规则：
+
+- 账号密码正确后生成随机管理员令牌，仅将令牌哈希写入数据库，原始令牌放入 `admin_token` HttpOnly Cookie。
+- 连续失败 5 次后锁定 15 分钟；登录成功或登录锁定期结束后重置失败计数。
+- 登录成功、失败、锁定和解锁相关事件写入 `admin_login_logs`。
+- 管理员密码使用 `password_hash(PASSWORD_BCRYPT)` 存储，绝不明文保存。
+
+错误码：
+
+- `6002` 账号或密码错误
+- `6003` 登录失败次数过多，请稍后重试
+- `6004` CSRF 校验失败
+
+---
+
+### 3. 当前管理员
+
+`GET /api/admin/auth/me`
+
+响应 data：
+
+```json
+{
+  "admin": { "id": 1, "username": "admin" },
+  "csrf_token": "…"
+}
+```
+
+业务规则：
+
+- 管理员未登录、令牌过期或账号停用时返回 `6001`。
+- 响应头统一禁止缓存，后台数据不会进入浏览器共享缓存。
+
+错误码：
+
+- `6001` 未登录或登录已失效
+
+---
+
+### 4. 退出登录
+
+`POST /api/admin/auth/logout`
+
+请求头：`X-CSRF-Token: <csrf_token>`
+
+响应 data：`{}`
+
+业务规则：
+
+- 清除数据库中的管理员令牌哈希，并使 `admin_token`、`admin_csrf` Cookie 立即失效。
+
+---
+
+### 5. 后台概览
+
+`GET /api/admin/dashboard`
+
+响应 data：
+
+```json
+{
+  "users": 12,
+  "players": 10,
+  "alive_players": 8,
+  "retreating_players": 2,
+  "admin_users": 1,
+  "configs": 11,
+  "server_time": 1735560000
+}
+```
+
+---
+
+### 6. 配置列表
+
+`GET /api/admin/configs`
+
+响应 data：
+
+```json
+{
+  "configs": [
+    {
+      "name": "realms",
+      "file": "realms.json",
+      "size": 1405,
+      "updated_at": 1735560000,
+      "sha256": "…"
+    }
+  ]
+}
+```
+
+业务规则：
+
+- 仅列出仓库根目录 `config/*.json`，不返回任意服务器路径。
+- 配置名只允许小写字母、数字和下划线。
+- 拒绝符号链接、目录、空文件和超大文件。
+
+---
+
+### 7. 配置详情
+
+`GET /api/admin/configs/{name}`
+
+响应 data：
+
+```json
+{
+  "name": "realms",
+  "file": "realms.json",
+  "content": "{...}",
+  "updated_at": 1735560000,
+  "sha256": "…",
+  "backups": []
+}
+```
+
+业务规则：
+
+- `content` 返回原始 JSON 文本，前端编辑后再提交。
+- 后台只读取 `config/{name}.json`，不允许路径穿越。
+
+---
+
+### 8. 保存配置
+
+`POST /api/admin/configs/{name}`
+
+请求头：`X-CSRF-Token: <csrf_token>`
+
+请求：
+
+```json
+{
+  "content": "{...}",
+  "password": "当前管理员密码",
+  "reason": "调整练气阶段寿命上限"
+}
+```
+
+响应 data：
+
+```json
+{ "name": "realms", "sha256": "…", "updated_at": 1735560000 }
+```
+
+业务规则：
+
+- 必须通过当前管理员密码二次确认；连续错误 5 次锁定敏感操作 15 分钟。
+- 必须提交 3-200 字操作原因，写入审计日志。
+- 服务端用 `json_decode` 校验 JSON，并校验核心配置结构；非法 JSON 或明显不满足项目约束的配置直接拒绝。
+- 写入前自动在 `backend/runtime/admin/config_backups/` 创建备份，使用临时文件写入后原子替换原文件。
+- 每次配置保存写入 `admin_operation_logs`，记录管理员、配置名、原因、前后摘要和备份名。
+- 配置读取按文件修改时间热更新，修改成功后无需重启 Webman。
+
+错误码：
+
+- `6005` 请求参数不正确
+- `6006` 管理员密码错误
+- `6007` 敏感操作已锁定
+- `6008` 配置不存在
+- `6009` 配置 JSON 无效
+- `6010` 配置过大
+- `6011` 配置写入失败
+- `6014` 操作原因必填
+
+---
+
+### 9. 配置备份
+
+`GET /api/admin/configs/{name}/backups`
+
+响应 data：
+
+```json
+{
+  "backups": [
+    { "name": "20260930T010203-abcdef12.json", "size": 1405, "created_at": 1735560000 }
+  ]
+}
+```
+
+`POST /api/admin/configs/{name}/restore`
+
+请求：
+
+```json
+{
+  "backup": "20260930T010203-abcdef12.json",
+  "password": "当前管理员密码",
+  "reason": "回滚错误的寿命调整"
+}
+```
+
+业务规则：
+
+- 恢复前先备份当前文件，再原子替换。
+- 备份文件名必须来自白名单列表，不允许路径穿越。
+- 恢复同样需要管理员密码、操作原因，并写入审计日志。
+
+错误码：
+
+- `6006` 管理员密码错误
+- `6012` 备份不存在
+- `6011` 配置写入失败
+
+---
+
+### 10. 数据表列表
+
+`GET /api/admin/tables`
+
+响应 data：
+
+```json
+{
+  "tables": [
+    { "name": "users", "label": "用户账号", "group": "game" },
+    { "name": "players", "label": "玩家角色", "group": "game" },
+    { "name": "admin_users", "label": "管理员账号", "group": "admin" }
+  ]
+}
+```
+
+业务规则：
+
+- 只展示固定白名单表，不允许通过表名访问任意数据库表。
+- `group = game` 为主业务表，`group = admin` 为后台自身数据表，管理端菜单分组展示。
+- 默认只读，不提供任意 SQL、行编辑、删除或结构修改入口。
+- `users.password_hash`、`users.auth_token` 等敏感字段统一返回 `***`。
+
+---
+
+### 11. 数据表内容
+
+`GET /api/admin/tables/{table}?page=1&page_size=20&keyword=&sort=id&order=desc`
+
+响应 data：
+
+```json
+{
+  "table": "players",
+  "columns": [
+    { "name": "id", "label": "玩家ID", "type": "bigint unsigned", "is_time": false, "masked": false },
+    { "name": "name", "label": "道号", "type": "varchar(32)", "is_time": false, "masked": false },
+    { "name": "created_at", "label": "创建时间", "type": "int unsigned", "is_time": true, "masked": false }
+  ],
+  "rows": [],
+  "page": 1,
+  "page_size": 20,
+  "total": 0
+}
+```
+
+业务规则：
+
+- `sort` 必须是该表真实列名；`order` 只允许 `asc` / `desc`。
+- `page_size` 最大 50，防止一次性拉取整表。
+- `keyword` 只在该表白名单文本列中搜索，使用 PDO 参数绑定，不拼接用户输入。
+- `columns[].label` 为字段中文名；`is_time = true` 的字段由前端统一格式化为本地时间。
+- 表数据仅用于排查和审计，不提供通用写入接口。
+
+错误码：
+
+- `6013` 数据表不允许访问或不存在
+
+---
+
+### 12. 调整闭关结束时间（测试工具）
+
+`POST /api/admin/retreats/{id}/finish-at`
+
+请求头：`X-CSRF-Token: <csrf_token>`
+
+请求：
+
+```json
+{
+  "finish_at": 1735560000,
+  "password": "当前管理员密码",
+  "reason": "测试闭关立即到期"
+}
+```
+
+响应 data：
+
+```json
+{ "id": 88, "before_finish_at": 1735563600, "finish_at": 1735560000 }
+```
+
+业务规则：
+
+- 只允许修改 `status = 0` 的进行中闭关记录，历史闭关不可改。
+- 只修改 `retreats.finish_at`，不修改玩家状态、预计收益或结算结果。
+- 请求必须经过管理员登录、CSRF 校验、当前管理员密码二次确认，并填写 3-200 字测试原因。
+- 修改写入 `admin_operation_logs`，记录修改前后时间戳。
+- 可通过该项把结束时间调整到当前时间或未来时间，用于测试结算、死亡和状态流转。
+
+错误码：
+
+- `6005` 时间参数不正确
+- `6006` 管理员密码错误
+- `6007` 敏感操作已锁定
+- `6013` 闭关记录不存在或已结束
+- `6014` 操作原因必填
+
+---
+
+## 四、未尽事项
 
 - 未定义的接口（宗门争锋、炼丹）在玩法确定前**不实现**
 - 所有数值规则以 `config/*.json` 为准，接口层不重复硬编码

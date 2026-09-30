@@ -1,9 +1,8 @@
 <template>
   <section class="panel">
     <h3>渡劫突破</h3>
-    <p v-if="blocked" class="muted">{{ hint }}</p>
-    <p v-else-if="!canBreakthrough" class="muted">修为未满，继续冥想 / 闭关积累修为。</p>
-    <button v-else class="primary" data-sfx="breakthrough" @click="doBreakthrough">突破至「{{ nextRealmName }}」</button>
+    <p v-if="!blocked && !canBreakthrough" class="muted">修为未满，继续悟道 / 冥想 / 闭关积累修为。</p>
+    <button v-else-if="!blocked" class="primary" data-sfx="breakthrough" @click="doBreakthrough">突破至「{{ nextRealmName }}」</button>
   </section>
 </template>
 
@@ -11,14 +10,12 @@
 import { computed } from 'vue'
 import { usePlayerStore } from '@/stores/player'
 import { realmsConfig } from '@/config'
-import { statusHint } from '@/utils/status'
 import { useToastStore } from '@/stores/toast'
 
 const store = usePlayerStore()
 const toast = useToastStore()
 
 const blocked = computed(() => (store.player?.status ?? 'idle') !== 'idle')
-const hint = computed(() => statusHint(store.player?.status ?? 'idle'))
 
 const currentIndex = computed(() =>
   store.player ? realmsConfig.realms.findIndex((r) => r.id === store.player!.realm_id) : -1

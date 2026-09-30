@@ -54,6 +54,13 @@ export interface Technique {
 
 export const realmsConfig = realmsJson as unknown as { start_age_years: number; realms: Realm[] }
 export const meditationConfig = meditationJson as unknown as {
+  dazuo_base_exp: number
+  dazuo_batch_size: number
+  dazuo_daily_limit: number
+  dazuo_click_interval_ms: number
+  dazuo_cooldown_ms: number
+  meditation_durations: number[]
+  meditation_exp_ratio: number
   meditations: MeditationItem[]
   retreats: RetreatItem[]
   retreat_buff_cap: number

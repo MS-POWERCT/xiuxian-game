@@ -7,6 +7,7 @@ export const usePlayerStore = defineStore('player', {
     player: null as api.Player | null,
     retreat: null as api.ActiveRetreat | null,
     meditation: null as api.ActiveMeditation | null,
+    dazuoState: null as api.DazuoState | null,
     loading: false,
     loadError: '' as string,
   }),
@@ -18,6 +19,7 @@ export const usePlayerStore = defineStore('player', {
         this.player = data.player
         this.retreat = data.retreat
         this.meditation = data.meditation
+        this.dazuoState = data.dazuo
         this.loadError = ''
       } catch (e) {
         this.loadError = '无法连接后端：' + (e as Error).message
@@ -35,6 +37,16 @@ export const usePlayerStore = defineStore('player', {
       const data = await api.claimMeditation()
       this.player = data.player
       this.meditation = null
+      return data
+    },
+    async dazuo(count: number) {
+      const data = await api.dazuo(count)
+      this.player = data.player
+      this.dazuoState = {
+        daily_used: data.daily_used,
+        daily_limit: data.daily_limit,
+        batch_size: data.batch_size,
+      }
       return data
     },
     async startRetreat(payload: api.RetreatStartPayload) {
@@ -66,6 +78,7 @@ export const usePlayerStore = defineStore('player', {
       this.retreat = null
       this.meditation = null
       useToastStore().success(`已转世重修，当前第 ${data.player.life_no} 世`)
+      await this.load()
       return data
     },
   },

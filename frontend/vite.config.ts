@@ -11,6 +11,14 @@ export default defineConfig({
       '@config': fileURLToPath(new URL('../config', import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        admin: fileURLToPath(new URL('./admin.html', import.meta.url)),
+      },
+    },
+  },
   server: {
     port: 5173,
     // 允许读取项目外的 config/ 目录

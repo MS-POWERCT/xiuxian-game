@@ -111,6 +111,49 @@ class Db
                 created_at INT UNSIGNED NOT NULL,
                 KEY idx_player_status (player_id, status)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            "CREATE TABLE IF NOT EXISTS admin_users (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(32) NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                is_enabled TINYINT(1) NOT NULL DEFAULT 1,
+                auth_token_hash CHAR(64) NULL,
+                auth_token_expires_at INT UNSIGNED NULL,
+                failed_login_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                locked_until INT UNSIGNED NULL,
+                sensitive_fail_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                sensitive_locked_until INT UNSIGNED NULL,
+                last_login_at INT UNSIGNED NULL,
+                last_login_ip VARCHAR(45) NULL,
+                created_at INT UNSIGNED NOT NULL,
+                updated_at INT UNSIGNED NOT NULL,
+                UNIQUE KEY uk_username (username)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            "CREATE TABLE IF NOT EXISTS admin_login_logs (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                admin_id BIGINT UNSIGNED NULL,
+                username VARCHAR(32) NOT NULL,
+                success TINYINT(1) NOT NULL DEFAULT 0,
+                ip VARCHAR(45) NOT NULL DEFAULT '',
+                user_agent VARCHAR(255) NOT NULL DEFAULT '',
+                created_at INT UNSIGNED NOT NULL,
+                KEY idx_admin_created (admin_id, created_at),
+                KEY idx_created_at (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            "CREATE TABLE IF NOT EXISTS admin_operation_logs (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                admin_id BIGINT UNSIGNED NOT NULL,
+                action VARCHAR(32) NOT NULL,
+                target_type VARCHAR(32) NOT NULL,
+                target_id VARCHAR(64) NOT NULL,
+                reason VARCHAR(255) NOT NULL DEFAULT '',
+                detail JSON NULL,
+                ip VARCHAR(45) NOT NULL DEFAULT '',
+                user_agent VARCHAR(255) NOT NULL DEFAULT '',
+                created_at INT UNSIGNED NOT NULL,
+                KEY idx_admin_created (admin_id, created_at),
+                KEY idx_target (target_type, target_id),
+                KEY idx_created_at (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         ];
         foreach ($ddl as $sql) {
             $pdo->exec($sql);
