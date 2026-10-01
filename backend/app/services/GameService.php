@@ -9,7 +9,7 @@ use support\Redis;
 use support\Request;
 
 /**
- * 核心玩法服务层：悟道 / 冥想 / 闭关 / 渡劫突破（严格依据 docs/api.md）
+ * 核心玩法服务层：感悟 / 冥想 / 闭关 / 渡劫突破（严格依据 docs/api.md）
  * 所有数值来自 config/*.json，逻辑层不硬编码任何数值。
  */
 class GameService
@@ -220,7 +220,7 @@ class GameService
         $batchSize = (int)$config['dazuo_batch_size'];
         $count = (int)$request->input('count', 0);
         if ($count !== $batchSize) {
-            return $this->fail(1000, '悟道次数不足');
+            return $this->fail(1000, '感悟次数不足');
         }
 
         $row = $this->playerRow($userId);
@@ -228,11 +228,11 @@ class GameService
             return $res;
         }
 
-        $dailyLimit = (int)$config['dazuo_daily_limit'];
+        $dailyLimit = $this->dazuoDailyLimit($row);
         $dailyKey = $this->dazuoDailyKey($row);
         $dailyUsed = $this->dazuoDailyUsed($row);
         if ($dailyLimit > 0 && $dailyUsed + $count > $dailyLimit) {
-            return $this->fail(4003, '今日悟道次数已达上限');
+            return $this->fail(4003, '今日感悟次数已达上限');
         }
 
         $cooldownMs = (int)$config['dazuo_cooldown_ms'];
@@ -240,7 +240,7 @@ class GameService
         if ($cooldownMs > 0) {
             $acquired = Redis::connection()->client()->set($cooldownKey, '1', ['NX', 'PX' => $cooldownMs]);
             if (!$acquired) {
-                return $this->fail(4004, '悟道尚未冷却');
+                return $this->fail(4004, '感悟尚未冷却');
             }
         }
 
@@ -251,7 +251,7 @@ class GameService
             if ($cooldownMs > 0) {
                 Redis::del($cooldownKey);
             }
-            return $this->fail(4003, '今日悟道次数已达上限');
+            return $this->fail(4003, '今日感悟次数已达上限');
         }
 
         $realm = $this->realmConfig($row['realm_id']);
@@ -929,12 +929,22 @@ class GameService
         return (int)Redis::get($this->dazuoDailyKey($row));
     }
 
+    // 今日感悟次数上限：dazuo_daily_limit_base + (境界 order - 1) × dazuo_daily_limit_per_realm
+    private function dazuoDailyLimit(array $row): int
+    {
+        $config = GameConfig::get('meditation');
+        $base = (int)($config['dazuo_daily_limit_base'] ?? 0);
+        $perRealm = (int)($config['dazuo_daily_limit_per_realm'] ?? 0);
+        $order = $this->unlockOrder((string)$row['realm_id']);
+        return $base + max(0, $order - 1) * $perRealm;
+    }
+
     private function dazuoState(array $row): array
     {
         $config = GameConfig::get('meditation');
         return [
             'daily_used' => $this->dazuoDailyUsed($row),
-            'daily_limit' => (int)$config['dazuo_daily_limit'],
+            'daily_limit' => $this->dazuoDailyLimit($row),
             'batch_size' => (int)$config['dazuo_batch_size'],
         ];
     }

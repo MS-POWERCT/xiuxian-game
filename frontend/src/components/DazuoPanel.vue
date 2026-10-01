@@ -2,7 +2,7 @@
   <section class="panel dazuo-panel">
     <div class="dazuo-head">
       <div>
-        <h3>悟道</h3>
+        <h3>感悟</h3>
         <p class="muted">念起即悟，攒满 {{ batchSize }} 次凝为一缕修为。</p>
       </div>
       <span class="batch">{{ dailyText }}</span>
@@ -17,7 +17,7 @@
       @click="click"
     >
       <span class="button-aura"></span>
-      <strong>{{ resolving ? '凝念' : '悟道' }}</strong>
+      <strong>{{ resolving ? '凝念' : '感悟' }}</strong>
       <small>{{ actionHint }}</small>
     </button>
 
@@ -73,7 +73,7 @@ let flashTimer: number | undefined
 const DAZUO_STATUSES = new Set(['idle', 'meditating', 'retreating', 'exploring'])
 const blocked = computed(() => !DAZUO_STATUSES.has(store.player?.status ?? 'idle'))
 const dailyUsed = computed(() => store.dazuoState?.daily_used ?? 0)
-const dailyLimit = computed(() => store.dazuoState?.daily_limit ?? meditationConfig.dazuo_daily_limit)
+const dailyLimit = computed(() => store.dazuoState?.daily_limit ?? meditationConfig.dazuo_daily_limit_base)
 const dailyBlocked = computed(() => dailyLimit.value > 0 && dailyUsed.value + batchSize > dailyLimit.value)
 const dailyDisplayUsed = computed(() => dailyLimit.value > 0
   ? Math.min(dailyLimit.value, dailyUsed.value + count.value)

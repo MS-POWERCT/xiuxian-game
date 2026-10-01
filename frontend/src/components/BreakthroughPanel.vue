@@ -1,7 +1,7 @@
 <template>
   <section class="panel">
     <h3>渡劫突破</h3>
-    <p v-if="!blocked && !canBreakthrough" class="muted">修为未满，继续悟道 / 冥想 / 闭关积累修为。</p>
+    <p v-if="!blocked && !canBreakthrough" class="muted">修为未满，继续感悟 / 冥想 / 闭关积累修为。</p>
     <button v-else-if="!blocked" class="primary" data-sfx="breakthrough" @click="doBreakthrough">突破至「{{ nextRealmName }}」</button>
   </section>
 </template>

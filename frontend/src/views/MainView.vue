@@ -40,7 +40,7 @@
         <h3>每天能做什么</h3>
         <div class="quick-grid">
           <div class="quick-card">
-            <span>悟道</span>
+            <span>感悟</span>
             <strong>点 5 次，微涨修为</strong>
             <small>碎片时间</small>
           </div>
@@ -61,7 +61,7 @@
           </div>
         </div>
         <div class="path-flow">
-          <span>悟道 / 冥想</span><i>→</i><span>攒修为</span><i>→</i><span>闭关</span><i>→</i><span>渡劫</span>
+          <span>感悟 / 冥想</span><i>→</i><span>攒修为</span><i>→</i><span>闭关</span><i>→</i><span>渡劫</span>
         </div>
         <p class="path-tip">记住一件事：寿元会一直流逝。</p>
       </section>
@@ -70,7 +70,7 @@
         <h3>修仙，本来就是一件无聊的事</h3>
         <p class="heart-lead">不是每天都有奇遇。<br />大多数时候，只是重复昨天。</p>
         <div class="heart-cards">
-          <div><span>大多数日子</span><strong>悟道、冥想、闭关</strong></div>
+          <div><span>大多数日子</span><strong>感悟、冥想、闭关</strong></div>
           <div><span>剩下的时间</span><strong>等一点变化发生</strong></div>
         </div>
         <blockquote>仙路漫漫，慢也是一种前进。<br />你今天来过，这条路上就多了一道脚印。</blockquote>

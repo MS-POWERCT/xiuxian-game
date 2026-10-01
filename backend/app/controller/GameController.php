@@ -6,7 +6,7 @@ use app\services\GameService;
 use support\Request;
 
 /**
- * 核心玩法控制器：悟道 / 冥想 / 闭关 / 渡劫突破（薄壳，业务逻辑在 app/services/GameService.php）
+ * 核心玩法控制器：感悟 / 冥想 / 闭关 / 渡劫突破（薄壳，业务逻辑在 app/services/GameService.php）
  * 严格依据 docs/api.md。
  */
 class GameController

@@ -6,7 +6,7 @@ use Webman\Route;
 Route::get('/api/player', [app\controller\GameController::class, 'player']); // 获取玩家信息
 Route::post('/api/meditate', [app\controller\GameController::class, 'meditate']); // 开始冥想
 Route::post('/api/meditate/claim', [app\controller\GameController::class, 'meditateClaim']); // 结算冥想
-Route::post('/api/dazuo', [app\controller\GameController::class, 'dazuo']); // 悟道批次结算
+Route::post('/api/dazuo', [app\controller\GameController::class, 'dazuo']); // 感悟批次结算
 Route::post('/api/retreat/start', [app\controller\GameController::class, 'retreatStart']); // 闭关
 Route::post('/api/retreat/claim', [app\controller\GameController::class, 'retreatClaim']); // 结算收益
 Route::post('/api/breakthrough', [app\controller\GameController::class, 'breakthrough']); // 渡劫突破

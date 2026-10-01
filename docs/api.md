@@ -53,23 +53,23 @@
 
 各动作允许的玩家状态（违反统一返回错误码 `1003 当前状态不允许该操作`）：
 
-| 动作                     | 允许状态    |
-| ------------------------ | ----------- |
-| 悟道 `dazuo`             | idle / meditating / retreating / exploring |
-| 开始冥想 `meditate`       | idle        |
-| 结算冥想 `meditate/claim` | meditating  |
-| 开始闭关 `retreat/start`  | idle        |
-| 结算闭关 `retreat/claim`  | retreating  |
-| 渡劫突破 `breakthrough`   | idle        |
-| 遗迹探索 `relic`          | idle        |
-| 转世重修 `reincarnate`    | idle / dead |
+| 动作                      | 允许状态                                   |
+| ------------------------- | ------------------------------------------ |
+| 感悟 `dazuo`              | idle / meditating / retreating / exploring |
+| 开始冥想 `meditate`       | idle                                       |
+| 结算冥想 `meditate/claim` | meditating                                 |
+| 开始闭关 `retreat/start`  | idle                                       |
+| 结算闭关 `retreat/claim`  | retreating                                 |
+| 渡劫突破 `breakthrough`   | idle                                       |
+| 遗迹探索 `relic`          | idle                                       |
+| 转世重修 `reincarnate`    | idle / dead                                |
 
 规则：
 
-- **冥想中（meditating）禁止**：再次冥想、闭关、探索、突破；悟道不受限制
-- **闭关中（retreating）禁止**：冥想、再次闭关、探索、突破；悟道不受限制
-- **死后（dead）禁止**：悟道、冥想、闭关、探索、突破，仅允许转世
-- 悟道是即时动作，不改变玩家当前状态，也不与冥想、闭关、探索互斥
+- **冥想中（meditating）禁止**：再次冥想、闭关、探索、突破；感悟不受限制
+- **闭关中（retreating）禁止**：冥想、再次闭关、探索、突破；感悟不受限制
+- **死后（dead）禁止**：感悟、冥想、闭关、探索、突破，仅允许转世
+- 感悟是即时动作，不改变玩家当前状态，也不与冥想、闭关、探索互斥
 - 校验由后端统一集中处理（入口 `guard`），前端禁用按钮仅作体验优化，真正拦截以后端为准
 
 ---
@@ -103,7 +103,7 @@
 
 - `retreat`：当前进行中的闭关（`status = 0`），无则 `null`。字段：`{ retreat_id, start_at, finish_at, expected_exp, status }`
 - `meditation`：当前进行中的冥想，无则 `null`。字段：`{ start_at, finish_at, duration, expected_exp }`
-- `dazuo`：今日悟道状态，字段：`{ daily_used, daily_limit, batch_size }`
+- `dazuo`：今日感悟状态，字段：`{ daily_used, daily_limit, batch_size }`
 
 业务规则：
 
@@ -181,7 +181,7 @@
 
 ---
 
-### 4. 悟道（即时微收益）
+### 4. 感悟（即时微收益）
 
 `POST /api/dazuo`
 
@@ -210,16 +210,17 @@
 - 前端每次点击只在本地计数，不请求接口；累计满 `dazuo_batch_size` 后才提交一次
 - 后端只接受完整批次，按批次一次性结算修为
 - 批次收益 = `dazuo_base_exp × count × realm.cultivate_rate × age.cultivate_rate × (1 + speed_bonus)`
-- 每日上限按点击次数统计，使用 Redis 按「玩家 + 当前世」累计；转世后当前世重新计算，`dazuo_daily_limit` 为 0 时不限制
+- 每日上限按点击次数统计，使用 Redis 按「玩家 + 当前世」累计；转世后当前世重新计算
+- 每日上限随境界提升：`daily_limit = dazuo_daily_limit_base + (境界 order - 1) × dazuo_daily_limit_per_realm`；两项均为 0 时不限制
 - `dazuo_cooldown_ms` 大于 0 时，两次批次结算之间受 Redis 短期冷却限制
 - `dazuo_click_interval_ms` 只控制前端按钮响应间隔，不参与修为计算
 
 错误码：
 
 - `1000` 提交次数不完整
-- `1003` 当前状态不允许该操作（dead 状态禁止悟道）
-- `4003` 今日悟道次数已达上限
-- `4004` 悟道尚未冷却
+- `1003` 当前状态不允许该操作（dead 状态禁止感悟）
+- `4003` 今日感悟次数已达上限
+- `4004` 感悟尚未冷却
 
 ---
 
@@ -734,7 +735,11 @@
 ```json
 {
   "backups": [
-    { "name": "20260930T010203-abcdef12.json", "size": 1405, "created_at": 1735560000 }
+    {
+      "name": "20260930T010203-abcdef12.json",
+      "size": 1405,
+      "created_at": 1735560000
+    }
   ]
 }
 ```
@@ -800,9 +805,27 @@
 {
   "table": "players",
   "columns": [
-    { "name": "id", "label": "玩家ID", "type": "bigint unsigned", "is_time": false, "masked": false },
-    { "name": "name", "label": "道号", "type": "varchar(32)", "is_time": false, "masked": false },
-    { "name": "created_at", "label": "创建时间", "type": "int unsigned", "is_time": true, "masked": false }
+    {
+      "name": "id",
+      "label": "玩家ID",
+      "type": "bigint unsigned",
+      "is_time": false,
+      "masked": false
+    },
+    {
+      "name": "name",
+      "label": "道号",
+      "type": "varchar(32)",
+      "is_time": false,
+      "masked": false
+    },
+    {
+      "name": "created_at",
+      "label": "创建时间",
+      "type": "int unsigned",
+      "is_time": true,
+      "masked": false
+    }
   ],
   "rows": [],
   "page": 1,

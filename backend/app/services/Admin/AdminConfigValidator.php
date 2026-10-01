@@ -101,11 +101,12 @@ class AdminConfigValidator
     {
         if (!isset($data['dazuo_base_exp']) || !is_numeric($data['dazuo_base_exp'])
             || !isset($data['dazuo_batch_size']) || !is_numeric($data['dazuo_batch_size']) || (int)$data['dazuo_batch_size'] < 1
-            || !isset($data['dazuo_daily_limit']) || !is_numeric($data['dazuo_daily_limit']) || (int)$data['dazuo_daily_limit'] < 0
+            || !isset($data['dazuo_daily_limit_base']) || !is_numeric($data['dazuo_daily_limit_base']) || (int)$data['dazuo_daily_limit_base'] < 0
+            || !isset($data['dazuo_daily_limit_per_realm']) || !is_numeric($data['dazuo_daily_limit_per_realm']) || (int)$data['dazuo_daily_limit_per_realm'] < 0
             || !isset($data['dazuo_click_interval_ms']) || !is_numeric($data['dazuo_click_interval_ms']) || (int)$data['dazuo_click_interval_ms'] < 0
             || !isset($data['dazuo_cooldown_ms']) || !is_numeric($data['dazuo_cooldown_ms']) || (int)$data['dazuo_cooldown_ms'] < 0
         ) {
-            return 'meditation 的悟道配置错误';
+            return 'meditation 的感悟配置错误';
         }
         if (empty($data['meditation_durations']) || !self::isList($data['meditation_durations'])
             || !isset($data['meditation_exp_ratio']) || !is_numeric($data['meditation_exp_ratio'])
