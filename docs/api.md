@@ -32,7 +32,7 @@
 | age            | int    | 当前游戏内年龄（年）                                |
 | lifespan_max   | int    | 当前境界寿命上限（年）                              |
 | hp             | int    | 气血（0-100）                                       |
-| spirit_stones  | int    | 灵石                                                |
+| spirit_stones  | object | 灵石，四级分开计数 `{ low, mid, high, top }`        |
 | cultivate_rate | float  | 年龄补偿效率系数                                    |
 | speed_bonus    | float  | 转世修炼速度加成系数（上一世突破的大境界次数）      |
 | status         | string | 状态互斥：idle/retreating/meditating/exploring/dead |
@@ -255,11 +255,10 @@
 
 - 闭关产出 = `retreat_base_exp × realm.cultivate_rate × 功法效率 × (1 + 法阵加成 + 丹药加成)`
 - buff 叠加上限 = `config/meditation.json` 的 `retreat_buff_cap`
-- 消耗灵石：法阵按 `cost_per_use`、丹药按 `price`
+- 本期闭关不消耗灵石，法阵/丹药仅提供加成（后续改为消耗储物戒中的物品）
 
 错误码：
 
-- `1001` 灵石不足
 - `1003` 当前状态不允许该操作（非 idle，如闭关中 / 已死亡）
 - `1004` 功能未解锁（如闭关需练气九层解锁）
 
@@ -363,7 +362,7 @@
 - 空闲（idle）调用 = 主动兵解，`death_reason` 记 `self`；死亡（dead）调用 = 正常转世，`death_reason` 记当前死亡原因（当前唯一死亡机制为 `lifespan` 寿元耗尽）
 - 转世前先把这一世最终状态快照写入 `reincarnation_records`（`life_no` 自增）
 - 传承规则取自 `config/lifecycle.json` 的 `reincarnation`：
-  - 灵石继承 = 前世灵石 × `inherit_spirit_stone_ratio`
+  - 灵石继承：四个品级各自按 `inherit_spirit_stone_ratio` 向下取整继承
   - 修炼速度加成 = 上一世突破的大境界次数 × `cultivate_speed_bonus_per_realm`，不超过 `cultivate_speed_bonus_cap`（练气不计，每突破一个大境界计一次，若上一世止于元婴 = 突破 3 次 = 45%）
 - 新角色境界回练气初期、年龄回 `restart_age`、气血回满、继承灵石与速度加成、`life_no + 1`
 - 每天重修次数受 `max_reincarnations_per_day` 限制（自然日，每天 00:00 重置；用 Redis 计数）
@@ -494,7 +493,7 @@
       "age": 78,
       "lifespan_max": 200,
       "hp": 100,
-      "spirit_stones": 4500,
+      "spirit_stones": { "low": 4500, "mid": 0, "high": 0, "top": 0 },
       "cultivate_rate": 1.25,
       "total_days": 32,
       "death_reason": "lifespan",
@@ -509,6 +508,177 @@
 - 按 `life_no` 倒序返回该用户所有前世档案
 - `realm_name` / `stage_name` 由 `config/realms.json` 翻译，不硬编码
 - `death_reason` 中文含义由前端映射展示
+- `spirit_stones` 为四级对象 `{ low, mid, high, top }`
+
+---
+
+### 14. 灵石余额
+
+`GET /api/spirit-stones`
+
+请求头：`Authorization: Bearer <token>`
+
+响应 data：
+
+```json
+{ "stones": { "low": 4500, "mid": 12, "high": 0, "top": 0 } }
+```
+
+业务规则：
+
+- 灵石按四个品级分开计数（下品 low / 中品 mid / 上品 high / 极品 top）
+- 品级与上限取自 `config/economy.json` 的 `spirit_stone_levels`、`spirit_stone_caps`
+
+错误码：
+
+- `5005` 未登录或登录已失效
+
+---
+
+### 15. 灵石品级兑换
+
+`POST /api/spirit-stones/exchange`
+
+请求头：`Authorization: Bearer <token>`
+
+请求：
+
+```json
+{ "from_level": "low", "to_level": "mid", "amount": 10 }
+```
+
+- `amount` 恒为「高品级一侧」的数量；`from_level` 与 `to_level` 必须相邻
+
+响应 data：
+
+```json
+{
+  "stones": { "low": 3400, "mid": 22, "high": 0, "top": 0 },
+  "cost": 1000,
+  "fee": 50
+}
+```
+
+业务规则：
+
+- 升级（低→高）：1 高品 = `exchange_ratio` 低品 + 手续费；手续费 = 本金 × `exchange_fee_ratio` 对应兑换对比例，额外以源品级扣除
+- 降级（高→低）：1 高品 = `exchange_ratio` 低品，免手续费
+- 比例与手续费取自 `config/economy.json`
+
+错误码：
+
+- `1000` 兑换参数无效 / 品级不相邻
+- `1001` 灵石不足
+- `4005` 目标品级灵石已达上限
+- `5005` 未登录或登录已失效
+
+---
+
+### 16. 商店商品列表
+
+`GET /api/shop`
+
+请求头：`Authorization: Bearer <token>`
+
+响应 data：
+
+```json
+{
+  "items": [
+    {
+      "id": "juqi_san",
+      "name": "聚气散",
+      "category": "pill",
+      "ref_id": "juqi_san",
+      "price": 10,
+      "currency_level": "low"
+    }
+  ]
+}
+```
+
+业务规则：
+
+- 商品与价格来自 `config/shop.json`，`currency_level` 指定必须使用的灵石品级
+- 本期不限购、不做上架解锁（`limit` / `unlock` 配置位保留）
+
+错误码：
+
+- `5005` 未登录或登录已失效
+
+---
+
+### 17. 购买商品
+
+`POST /api/shop/buy`
+
+请求头：`Authorization: Bearer <token>`
+
+请求：
+
+```json
+{ "item_id": "juqi_san", "quantity": 2 }
+```
+
+响应 data：
+
+```json
+{
+  "item_id": "juqi_san",
+  "name": "聚气散",
+  "quantity": 2,
+  "cost": 20,
+  "currency_level": "low",
+  "stones": { "low": 3380, "mid": 22, "high": 0, "top": 0 }
+}
+```
+
+业务规则：
+
+- 校验商品是否存在 → 扣对应品级灵石 → 写入储物戒（`player_items` 叠加数量）
+- 购买后可用 `GET /api/items` 查看所持物品
+
+错误码：
+
+- `1000` 商品不存在
+- `1001` 灵石不足
+- `5005` 未登录或登录已失效
+
+---
+
+### 18. 储物戒物品列表
+
+`GET /api/items`
+
+请求头：`Authorization: Bearer <token>`
+
+可选参数：`category`（如 `pill`），不传则返回全部
+
+响应 data：
+
+```json
+{
+  "items": [
+    {
+      "item_id": "juqi_san",
+      "name": "聚气散",
+      "category": "pill",
+      "quantity": 2,
+      "created_at": 1735560000,
+      "updated_at": 1735560000
+    }
+  ]
+}
+```
+
+业务规则：
+
+- 储物戒只放物品，不放灵石
+- `name` 由 `config/shop.json`、`config/pills.json` 翻译，不硬编码
+
+错误码：
+
+- `5005` 未登录或登录已失效
 
 ---
 
@@ -790,7 +960,7 @@
 
 - 只展示固定白名单表，不允许通过表名访问任意数据库表。
 - `group = game` 为主业务表，`group = admin` 为后台自身数据表，管理端菜单分组展示。
-- 默认只读，不提供任意 SQL、行编辑、删除或结构修改入口。
+- 默认只读，不提供任意 SQL、通用行编辑、删除或结构修改入口；仅对 `retreats`、`players` 各提供一个专用敏感操作接口（见 12、13）。
 - `users.password_hash`、`users.auth_token` 等敏感字段统一返回 `***`。
 
 ---
@@ -885,6 +1055,53 @@
 - `6007` 敏感操作已锁定
 - `6013` 闭关记录不存在或已结束
 - `6014` 操作原因必填
+
+---
+
+### 13. 给玩家增加灵石
+
+`POST /api/admin/players/{id}/spirit-stones`
+
+请求头：`X-CSRF-Token: <csrf_token>`
+
+请求：
+
+```json
+{
+  "amounts": { "low": 1000, "mid": 10, "high": 0, "top": 0 },
+  "password": "当前管理员密码",
+  "reason": "补偿玩家异常丢失的灵石"
+}
+```
+
+- `amounts`：四个品级各自要增加的数量，键取自 `config/economy.json` 的 `spirit_stone_levels`，未填按 0 处理；至少一项大于 0
+
+响应 data：
+
+```json
+{
+  "player_id": 12,
+  "player_name": "青云子",
+  "requested": { "low": 1000, "mid": 10, "high": 0, "top": 0 },
+  "before": { "low": 320, "mid": 0, "high": 0, "top": 0 },
+  "after": { "low": 1320, "mid": 10, "high": 0, "top": 0 }
+}
+```
+
+业务规则：
+
+- 在玩家现有灵石基础上按品级叠加，规则与游戏内一致：每个品级不得超过 `config/economy.json` 的 `spirit_stone_caps`，超上限部分直接丢弃
+- 请求必须经过管理员登录、CSRF 校验、当前管理员密码二次确认，并填写 3-200 字操作原因
+- 发放写入 `admin_operation_logs`（`action = player_spirit_stones`），记录申请量、发放前后持有量
+- 前端在提交前会按上限校验，避免出现被静默丢弃的差额
+
+错误码：
+
+- `6005` 灵石数量不正确 / 未填写任何数量
+- `6006` 管理员密码错误
+- `6007` 敏感操作已锁定
+- `6014` 操作原因必填
+- `6015` 玩家不存在
 
 ---
 

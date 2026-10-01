@@ -12,5 +12,18 @@
   "daily_login_reward": {
     "min": 50,
     "max": 200
+  },
+  "spirit_stone_levels": ["low", "mid", "high", "top"],
+  "spirit_stone_caps": {
+    "low": 1000000,
+    "mid": 1000000,
+    "high": 1000000,
+    "top": 1000000
+  },
+  "exchange_ratio": 100,
+  "exchange_fee_ratio": {
+    "low_to_mid": 0.05,
+    "mid_to_high": 0.10,
+    "high_to_top": 0.15
   }
 }

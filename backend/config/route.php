@@ -15,6 +15,13 @@ Route::post('/api/breakthrough', [app\controller\GameController::class, 'breakth
 Route::post('/api/reincarnate', [app\controller\GameController::class, 'reincarnate']); // 转世重修/主动兵解
 Route::get('/api/reincarnate/records', [app\controller\GameController::class, 'reincarnateRecords']); // 前世档案
 
+// 灵石 / 商店 / 储物戒（依据 docs/灵石商店储物戒设计.md）
+Route::get('/api/spirit-stones', [app\controller\SpiritStoneController::class, 'index']); // 灵石余额
+Route::post('/api/spirit-stones/exchange', [app\controller\SpiritStoneController::class, 'exchange']); // 灵石品级兑换
+Route::get('/api/shop', [app\controller\ShopController::class, 'index']); // 商店商品列表
+Route::post('/api/shop/buy', [app\controller\ShopController::class, 'buy']); // 购买商品
+Route::get('/api/items', [app\controller\ItemController::class, 'index']); // 储物戒物品列表
+
 // 用户账号模块（依据 docs/api.md）
 Route::post('/api/auth/register', [app\controller\AuthController::class, 'register']); // 邮箱注册
 Route::post('/api/auth/login', [app\controller\AuthController::class, 'login']); // 邮箱登录
@@ -39,6 +46,7 @@ Route::group('/api/admin', function () {
         Route::get('/tables', [app\controller\Admin\TableController::class, 'index']); // 数据表列表
         Route::get('/tables/{table}', [app\controller\Admin\TableController::class, 'show']); // 数据表内容
         Route::post('/retreats/{id}/finish-at', [app\controller\Admin\RetreatController::class, 'updateFinishAt']); // 调整进行中闭关结束时间（测试工具）
+        Route::post('/players/{id}/spirit-stones', [app\controller\Admin\PlayerController::class, 'grantSpiritStones']); // 给玩家增加灵石
     })->middleware(app\middleware\AdminAuth::class);
 })->middleware(app\middleware\AdminSecurity::class);
 

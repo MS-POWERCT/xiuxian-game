@@ -322,14 +322,7 @@ class GameService
             return $this->fail(1000, '闭关时长无效');
         }
 
-        // 成本 = 法阵 cost_per_use + 丹药 price 之和
-        $cost = $formation ? (int)$formation['cost_per_use'] : 0;
-        foreach ($pillObjs as $p) {
-            $cost += (int)$p['price'];
-        }
-        if ((int)$row['spirit_stones'] < $cost) {
-            return $this->fail(1001, '灵石不足');
-        }
+        // 本期闭关不消耗灵石，法阵/丹药仅提供加成（后续改为消耗储物戒中的物品）
 
         // 关闭 buff：法阵加成 + 丹药加成，上限定为 retreat_buff_cap
         $buff = 0.0;
@@ -352,7 +345,6 @@ class GameService
                 * (1 + $this->speedBonus($row))
         );
 
-        $row['spirit_stones'] -= $cost;
         $row['status'] = 'retreating';
         $this->savePlayerRow($row);
 
@@ -447,8 +439,10 @@ class GameService
         $row['stage_index'] = 0;
         $row['exp'] = 0;
         $row['lifespan_max'] = $toRealm['lifespan_years'];
-        $row['spirit_stones'] += $reward;
         $this->savePlayerRow($row);
+        // 首破奖励以下品灵石发放（走统一灵石服务，超出上限部分丢弃）
+        $stones = (new SpiritStoneService())->add((int)$row['id'], 'low', $reward);
+        $row['spirit_stones'] = SpiritStoneService::encode($stones);
         return $this->ok([
             'success' => true,
             'to_realm' => $toRealmId,
@@ -500,16 +494,21 @@ class GameService
         // 1) 快照当前世最终状态
         $this->snapshotLife($row, $deathReason);
 
-        // 2) 传承：灵石按比例继承；速度加成由 life_no 递增后实时计算，不落地存储
-        $inheritStones = (int)floor((int)$row['spirit_stones'] * (float)$re['inherit_spirit_stone_ratio']);
+        // 2) 传承：灵石按品级各自继承；速度加成由 life_no 递增后实时计算，不落地存储
+        $ratio = (float)$re['inherit_spirit_stone_ratio'];
+        $current = (new SpiritStoneService())->get((int)$row['id']);
+        $inheritStones = [];
+        foreach ($current as $level => $amount) {
+            $inheritStones[$level] = (int)floor($amount * $ratio);
+        }
 
-        // 3) 新角色：境界回练气初期、年龄回 restart_age、气血回满、继承灵石、life_no + 1
+        // 3) 新角色：境界回练气初期、年龄回 restart_age、气血回满、life_no + 1
         $first = GameConfig::get('realms')['realms'][0];
         $newLifeNo = (int)$row['life_no'] + 1;
         $now = time();
         $stmt = Db::pdo()->prepare(
             'UPDATE players
-             SET life_no=?, realm_id=?, stage_index=0, exp=0, age=?, lifespan_max=?, hp=?, spirit_stones=?, alive=1, status=?, meditation_start_at=NULL, meditation_finish_at=NULL, meditation_duration=NULL, meditation_expected_exp=NULL, created_at=?, updated_at=?
+             SET life_no=?, realm_id=?, stage_index=0, exp=0, age=?, lifespan_max=?, hp=?, alive=1, status=?, meditation_start_at=NULL, meditation_finish_at=NULL, meditation_duration=NULL, meditation_expected_exp=NULL, created_at=?, updated_at=?
              WHERE id=?'
         );
         $stmt->execute([
@@ -518,12 +517,12 @@ class GameService
             (int)$re['restart_age'],
             (int)$first['lifespan_years'],
             (int)$lifecycle['hp']['max'],
-            $inheritStones,
             'idle',
             $now,
             $now,
             (int)$row['id'],
         ]);
+        (new SpiritStoneService())->set((int)$row['id'], $inheritStones);
 
         $row = $this->playerRow($userId);
         return $this->ok(['player' => $this->playerDto($row)]);
@@ -552,7 +551,7 @@ class GameService
                 'age' => (int)$r['age'],
                 'lifespan_max' => (int)$r['lifespan_max'],
                 'hp' => (int)$r['hp'],
-                'spirit_stones' => (int)$r['spirit_stones'],
+                'spirit_stones' => SpiritStoneService::parse($r['spirit_stones']),
                 'cultivate_rate' => (float)$r['cultivate_rate'],
                 'total_days' => (int)$r['total_days'],
                 'death_reason' => $r['death_reason'],
@@ -722,6 +721,12 @@ class GameService
         return $user === null ? null : (int)$user['id'];
     }
 
+    // 供其他玩法服务复用：取该用户角色 id，不存在则创建（一个账号一个角色）
+    public function playerIdForUser(int $userId): int
+    {
+        return (int)$this->playerRow($userId)['id'];
+    }
+
     // 取当前用户绑定的玩家，不存在则创建（一个账号一个角色）
     private function playerRow(int $userId): array
     {
@@ -760,17 +765,18 @@ class GameService
             $age,
             (int)$realm['lifespan_years'],
             (int)$lifecycle['hp']['max'],
-            (int)($preset['initial_spirit_stones'] ?? 0),
+            SpiritStoneService::encode(['low' => (int)($preset['initial_spirit_stones'] ?? 0)]),
             $now,
             $now,
         ]);
         return $this->playerRow($userId);
     }
 
+    // 仅写常规字段；灵石变动一律走 SpiritStoneService，避免此处覆盖
     private function savePlayerRow(array $row): void
     {
         $stmt = Db::pdo()->prepare(
-            'UPDATE players SET name=?, realm_id=?, stage_index=?, exp=?, age=?, lifespan_max=?, hp=?, spirit_stones=?, alive=?, status=?, updated_at=? WHERE id=?'
+            'UPDATE players SET name=?, realm_id=?, stage_index=?, exp=?, age=?, lifespan_max=?, hp=?, alive=?, status=?, updated_at=? WHERE id=?'
         );
         $stmt->execute([
             $row['name'],
@@ -780,7 +786,6 @@ class GameService
             (int)$row['age'],
             (int)$row['lifespan_max'],
             (int)$row['hp'],
-            (int)$row['spirit_stones'],
             (int)$row['alive'],
             $row['status'],
             time(),
@@ -860,7 +865,7 @@ class GameService
             (int)$row['age'],
             (int)$row['lifespan_max'],
             (int)$row['hp'],
-            (int)$row['spirit_stones'],
+            SpiritStoneService::encode(SpiritStoneService::parse($row['spirit_stones'])),
             $this->cultivateRate((int)$row['age']),
             $totalDays,
             $deathReason,
@@ -881,7 +886,7 @@ class GameService
             'age' => (int)$row['age'],
             'lifespan_max' => (int)$row['lifespan_max'],
             'hp' => (int)$row['hp'],
-            'spirit_stones' => (int)$row['spirit_stones'],
+            'spirit_stones' => SpiritStoneService::parse($row['spirit_stones']),
             'cultivate_rate' => $this->cultivateRate((int)$row['age']),
             'speed_bonus' => $this->speedBonus($row),
             'status' => $row['status'],

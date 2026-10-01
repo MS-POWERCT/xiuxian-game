@@ -69,7 +69,7 @@ class Db
                 age INT UNSIGNED NOT NULL,
                 lifespan_max INT UNSIGNED NOT NULL,
                 hp TINYINT UNSIGNED NOT NULL DEFAULT 100,
-                spirit_stones INT UNSIGNED NOT NULL DEFAULT 0,
+                spirit_stones JSON NULL,
                 alive TINYINT(1) NOT NULL DEFAULT 1,
                 status VARCHAR(16) NOT NULL DEFAULT 'idle',
                 meditation_start_at INT UNSIGNED NULL,
@@ -91,7 +91,7 @@ class Db
                 age INT UNSIGNED NOT NULL,
                 lifespan_max INT UNSIGNED NOT NULL,
                 hp TINYINT UNSIGNED NOT NULL DEFAULT 100,
-                spirit_stones INT UNSIGNED NOT NULL DEFAULT 0,
+                spirit_stones JSON NULL,
                 cultivate_rate FLOAT NOT NULL DEFAULT 1.0,
                 total_days INT UNSIGNED NOT NULL DEFAULT 0,
                 death_reason VARCHAR(16) NOT NULL,
@@ -110,6 +110,17 @@ class Db
                 status TINYINT NOT NULL DEFAULT 0,
                 created_at INT UNSIGNED NOT NULL,
                 KEY idx_player_status (player_id, status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            "CREATE TABLE IF NOT EXISTS player_items (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                player_id BIGINT UNSIGNED NOT NULL,
+                item_id VARCHAR(64) NOT NULL,
+                category VARCHAR(32) NOT NULL DEFAULT '',
+                quantity INT UNSIGNED NOT NULL DEFAULT 0,
+                created_at INT UNSIGNED NOT NULL,
+                updated_at INT UNSIGNED NOT NULL,
+                UNIQUE KEY uk_player_item (player_id, item_id),
+                KEY idx_player_category (player_id, category)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             "CREATE TABLE IF NOT EXISTS admin_users (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -178,6 +189,30 @@ class Db
         // 兼容旧 players 表：账号绑定列/索引缺失时补建
         static::ensureColumn($pdo, 'players', 'user_id', "BIGINT UNSIGNED NULL");
         static::ensureUniqueIndex($pdo, 'players', 'uk_user_id', 'user_id');
+
+        // 兼容旧库：灵石由单值 INT 迁移为四级 JSON
+        static::migrateSpiritStonesJson($pdo, 'players');
+        static::migrateSpiritStonesJson($pdo, 'reincarnation_records');
+    }
+
+    // 灵石列不是 JSON 时迁移：旧单值整体记为下品灵石，不损失玩家资产
+    private static function migrateSpiritStonesJson(PDO $pdo, string $table): void
+    {
+        $stmt = $pdo->prepare(
+            'SELECT DATA_TYPE FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+        );
+        $stmt->execute([$table, 'spirit_stones']);
+        $type = $stmt->fetchColumn();
+        // 列不存在（新表已由 DDL 建为 JSON）或已是 JSON 则无需迁移
+        if ($type === false || strtolower((string)$type) === 'json') {
+            return;
+        }
+        static::ensureColumn($pdo, $table, 'spirit_stones_legacy', 'INT UNSIGNED NOT NULL DEFAULT 0');
+        $pdo->exec("UPDATE `{$table}` SET `spirit_stones_legacy` = `spirit_stones`");
+        $pdo->exec("ALTER TABLE `{$table}` MODIFY COLUMN `spirit_stones` JSON NULL");
+        $pdo->exec("UPDATE `{$table}` SET `spirit_stones` = JSON_OBJECT('low', `spirit_stones_legacy`, 'mid', 0, 'high', 0, 'top', 0)");
+        $pdo->exec("ALTER TABLE `{$table}` DROP COLUMN `spirit_stones_legacy`");
     }
 
     // 列不存在时 ALTER TABLE 补建，用于老库 schema 迁移

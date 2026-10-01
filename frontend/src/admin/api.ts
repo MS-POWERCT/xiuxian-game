@@ -83,6 +83,20 @@ export const api = {
       `/retreats/${encodeURIComponent(String(id))}/finish-at`,
       payload
     ),
+  grantSpiritStones: (playerId: number, payload: { amounts: Record<string, number>; password: string; reason: string }) =>
+    rawRequest<SpiritStoneGrantResult>(
+      'POST',
+      `/players/${encodeURIComponent(String(playerId))}/spirit-stones`,
+      payload
+    ),
+}
+
+export interface SpiritStoneGrantResult {
+  player_id: number
+  player_name: string
+  requested: Record<string, number>
+  before: Record<string, number>
+  after: Record<string, number>
 }
 
 export interface AdminInfo {

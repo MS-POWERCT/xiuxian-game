@@ -12,7 +12,7 @@
         </div>
         <div v-if="open[r.life_no]" class="life-detail">
           <span class="chip">修为 {{ r.exp }}</span>
-          <span class="chip">灵石 {{ r.spirit_stones }}</span>
+          <span class="chip">灵石 {{ stoneText(r.spirit_stones) }}</span>
           <span class="chip">岁数 {{ r.age }}/{{ r.lifespan_max }}</span>
           <span class="chip">气血 {{ r.hp }}/100</span>
           <span class="chip">效率 ×{{ r.cultivate_rate.toFixed(2) }}</span>
@@ -27,7 +27,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
-import { getReincarnationRecords, type ReincarnationRecord } from '@/api/game'
+import { getReincarnationRecords, type ReincarnationRecord, type SpiritStones } from '@/api/game'
 import { usePlayerStore } from '@/stores/player'
 
 const store = usePlayerStore()
@@ -66,6 +66,11 @@ const REASON_TEXT: Record<ReincarnationRecord['death_reason'], string> = {
 }
 function reasonText(reason: ReincarnationRecord['death_reason']): string {
   return REASON_TEXT[reason] ?? reason
+}
+
+// 四级灵石紧凑展示：下/中/上/极
+function stoneText(s: SpiritStones): string {
+  return `下${s.low} 中${s.mid} 上${s.high} 极${s.top}`
 }
 
 function formatTime(ts: number): string {

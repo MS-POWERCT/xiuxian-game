@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "id": "juqi_san",
+      "name": "聚气散",
+      "category": "pill",
+      "ref_id": "juqi_san",
+      "price": 10,
+      "currency_level": "low",
+      "limit": null,
+      "unlock": null
+    }
+  ]
+}

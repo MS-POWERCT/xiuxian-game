@@ -6,6 +6,8 @@ import formationsJson from '@config/formations.json'
 import techniquesJson from '@config/techniques.json'
 import unlockJson from '@config/unlock.json'
 import audioJson from '@config/audio.json'
+import economyJson from '@config/economy.json'
+import shopJson from '@config/shop.json'
 
 export interface Realm {
   id: string
@@ -78,6 +80,35 @@ export interface AudioItem {
 export const audioConfig = audioJson as unknown as {
   bgm: Record<string, AudioItem>
   sfx: Record<string, AudioItem>
+}
+
+// ==================== 灵石 / 商店 ====================
+
+export interface ShopItemConfig {
+  id: string
+  name: string
+  category: string
+  ref_id: string
+  price: number
+  currency_level: string
+  limit: number | null
+  unlock: unknown
+}
+
+export const economyConfig = economyJson as unknown as {
+  spirit_stone_levels: string[]
+  spirit_stone_caps: Record<string, number>
+  exchange_ratio: number
+  exchange_fee_ratio: Record<string, number>
+}
+export const shopConfig = shopJson as unknown as { items: ShopItemConfig[] }
+
+// 灵石品级中文名（展示用文案，取自设计文档「下品/中品/上品/极品」）
+export const spiritStoneLabels: Record<string, string> = {
+  low: '下品',
+  mid: '中品',
+  high: '上品',
+  top: '极品',
 }
 
 export function realmOf(realmId: string): Realm | undefined {

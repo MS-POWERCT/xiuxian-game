@@ -72,6 +72,10 @@ export const usePlayerStore = defineStore('player', {
       }
       return data
     },
+    // 灵石变动后同步到本地玩家状态（兑换 / 购买等）
+    setStones(stones: api.SpiritStones) {
+      if (this.player) this.player.spirit_stones = stones
+    },
     async reincarnate() {
       const data = await api.reincarnate()
       this.player = data.player

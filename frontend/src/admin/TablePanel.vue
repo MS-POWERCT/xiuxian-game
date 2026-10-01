@@ -28,7 +28,7 @@
         </form>
       </div>
 
-      <p class="notice">只读浏览，敏感字段已在服务端脱敏；仅闭关记录提供“调整结束时间”测试工具。</p>
+      <p class="notice">只读浏览，敏感字段已在服务端脱敏；敏感操作需二次确认并写入审计日志（闭关记录可调整结束时间，玩家角色可增加灵石）。</p>
 
       <div class="table-scroll" v-if="columns.length > 0">
         <table>
@@ -40,6 +40,7 @@
                 <small v-if="col.masked" class="masked-tag">脱敏</small>
               </th>
               <th v-if="isRetreats">测试操作</th>
+              <th v-if="isPlayers">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -58,9 +59,12 @@
                 </button>
                 <span v-else class="muted">已结束</span>
               </td>
+              <td v-if="isPlayers">
+                <button type="button" class="ghost-btn" @click="openStoneDialog(row)">增加灵石</button>
+              </td>
             </tr>
             <tr v-if="!loading && rows.length === 0">
-              <td :colspan="columns.length + (isRetreats ? 1 : 0)" class="empty-cell">没有数据</td>
+              <td :colspan="columns.length + actionColumnCount" class="empty-cell">没有数据</td>
             </tr>
           </tbody>
         </table>
@@ -101,11 +105,41 @@
       </div>
     </div>
   </div>
+
+  <div class="modal-mask" v-if="stoneDialog">
+    <div class="modal">
+      <h3>给玩家增加灵石</h3>
+      <p class="muted">
+        玩家 #{{ editingPlayerId }} · {{ editingPlayerName }}。各品级持有量不超过 economy.json
+        配置的上限，超出部分会被丢弃。
+      </p>
+      <label v-for="level in stoneLevels" :key="level">
+        {{ stoneLevelLabel(level) }}灵石（当前 {{ stoneCurrent(level) }} / 上限 {{ stoneCaps[level] }}）
+        <input v-model.number="stoneAmounts[level]" type="number" min="0" :max="stoneCaps[level]" />
+      </label>
+      <label>
+        当前管理员密码
+        <input v-model="stonePassword" type="password" autocomplete="current-password" />
+      </label>
+      <label>
+        操作原因（3-200 字）
+        <textarea v-model="stoneReason" rows="3" placeholder="例如：补偿玩家异常丢失的灵石"></textarea>
+      </label>
+      <p class="error" v-if="stoneDialogError">{{ stoneDialogError }}</p>
+      <div class="modal-actions">
+        <button type="button" @click="closeStoneDialog" :disabled="stoneBusy">取消</button>
+        <button type="button" class="primary" :disabled="stoneBusy" @click="submitStoneDialog">
+          {{ stoneBusy ? '发放中…' : '确认增加' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { AdminApiError, api, type TableColumn, type TableItem } from './api'
+import { economyConfig, spiritStoneLabels } from '@/config'
 
 const props = withDefaults(defineProps<{ scope?: 'game' | 'admin'; initialTable?: string }>(), {
   scope: 'game',
@@ -129,6 +163,9 @@ const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize.va
 const visibleTables = computed(() => tables.value.filter((item) => item.group === props.scope))
 const selectedLabel = computed(() => visibleTables.value.find((item) => item.name === selectedTable.value)?.label || '')
 const isRetreats = computed(() => selectedTable.value === 'retreats')
+const isPlayers = computed(() => selectedTable.value === 'players')
+// 操作列数量：闭关记录 1 列，玩家角色 1 列
+const actionColumnCount = computed(() => (isRetreats.value ? 1 : 0) + (isPlayers.value ? 1 : 0))
 const tableGroupTitle = computed(() => (props.scope === 'game' ? '主业务数据' : '后台数据'))
 
 const finishDialog = ref(false)
@@ -299,6 +336,100 @@ async function submitFinishDialog() {
     dialogError.value = e instanceof Error ? e.message : '修改失败'
   } finally {
     finishBusy.value = false
+  }
+}
+
+// ==================== 增加灵石 ====================
+
+const stoneLevels = economyConfig.spirit_stone_levels
+const stoneCaps = economyConfig.spirit_stone_caps
+const stoneDialog = ref(false)
+const stoneBusy = ref(false)
+const stoneDialogError = ref('')
+const stonePassword = ref('')
+const stoneReason = ref('')
+const stoneAmounts = reactive<Record<string, number>>({})
+const stoneBefore = reactive<Record<string, number>>({})
+const editingPlayerId = ref(0)
+const editingPlayerName = ref('')
+
+function stoneLevelLabel(level: string): string {
+  return spiritStoneLabels[level] ?? level
+}
+
+function stoneCurrent(level: string): number {
+  return stoneBefore[level] ?? 0
+}
+
+function openStoneDialog(row: Record<string, unknown>) {
+  const id = Number(row.id)
+  if (!Number.isFinite(id)) return
+  editingPlayerId.value = id
+  editingPlayerName.value = String(row.name ?? '')
+  const raw = row.spirit_stones
+  let parsed: Record<string, unknown> = {}
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw) as Record<string, unknown>
+    } catch {
+      parsed = {}
+    }
+  } else if (raw && typeof raw === 'object') {
+    parsed = raw as Record<string, unknown>
+  }
+  stoneLevels.forEach((level) => {
+    stoneBefore[level] = Number(parsed[level] ?? 0) || 0
+    stoneAmounts[level] = 0
+  })
+  stonePassword.value = ''
+  stoneReason.value = ''
+  stoneDialogError.value = ''
+  stoneDialog.value = true
+}
+
+function closeStoneDialog() {
+  if (!stoneBusy.value) stoneDialog.value = false
+}
+
+async function submitStoneDialog() {
+  const total = stoneLevels.reduce((sum, level) => sum + (Number(stoneAmounts[level]) || 0), 0)
+  if (total <= 0) {
+    stoneDialogError.value = '请至少填写一个品级的灵石数量'
+    return
+  }
+  for (const level of stoneLevels) {
+    const amount = Number(stoneAmounts[level]) || 0
+    if (amount < 0) {
+      stoneDialogError.value = `${stoneLevelLabel(level)}灵石数量不能为负`
+      return
+    }
+    if (stoneCurrent(level) + amount > stoneCaps[level]) {
+      stoneDialogError.value = `${stoneLevelLabel(level)}灵石超出上限（上限 ${stoneCaps[level]}）`
+      return
+    }
+  }
+  stoneBusy.value = true
+  stoneDialogError.value = ''
+  try {
+    const amounts: Record<string, number> = {}
+    stoneLevels.forEach((level) => {
+      amounts[level] = Number(stoneAmounts[level]) || 0
+    })
+    await api.grantSpiritStones(editingPlayerId.value, {
+      amounts,
+      password: stonePassword.value,
+      reason: stoneReason.value.trim(),
+    })
+    stoneDialog.value = false
+    await loadData()
+  } catch (e) {
+    if (e instanceof AdminApiError && e.code === 6001) {
+      emit('unauthorized')
+      return
+    }
+    stoneDialogError.value = e instanceof Error ? e.message : '发放失败'
+  } finally {
+    stoneBusy.value = false
   }
 }
 

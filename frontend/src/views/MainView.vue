@@ -22,6 +22,12 @@
       </section>
       <ReincarnationRecords />
     </template>
+    <template v-else-if="page === 'market'">
+      <button class="ghost" data-sfx="click" @click="page = 'main'">‹ 返回洞府</button>
+      <SpiritStoneExchange />
+      <ShopPanel />
+      <ItemRing />
+    </template>
     <template v-else-if="page === 'path'">
       <button class="ghost" data-sfx="click" @click="page = 'main'">‹ 返回洞府</button>
 
@@ -107,10 +113,14 @@
             <strong>{{ store.player.hp }}<small> / 100</small></strong>
             <div class="attribute-track hp"><i :style="{ width: hpPercent + '%' }"></i></div>
           </div>
-          <div class="attribute-card plain">
+          <div class="attribute-card plain stone-card">
             <span>灵石</span>
-            <strong>{{ store.player.spirit_stones }}</strong>
-            <small>修行资粮</small>
+            <div class="stone-grid">
+              <div v-for="s in stoneList" :key="s.level">
+                <em>{{ s.short }}</em>
+                <b>{{ s.amount }}</b>
+              </div>
+            </div>
           </div>
           <div class="attribute-card plain">
             <span>悟性</span>
@@ -133,7 +143,10 @@
       <RetreatPanel />
       <BreakthroughPanel />
 
-      <button class="ghost settings-entry" data-sfx="click" @click="page = 'settings'">转世与档案</button>
+      <div class="entry-row">
+        <button class="ghost" data-sfx="click" @click="page = 'market'">坊市</button>
+        <button class="ghost" data-sfx="click" @click="page = 'settings'">转世与档案</button>
+      </div>
     </template>
   </template>
   <button v-if="page !== 'path'" class="path-entry" data-sfx="click" @click="page = 'path'">修行之路</button>
@@ -143,7 +156,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
-import { realmOf } from '@/config'
+import { economyConfig, realmOf, spiritStoneLabels } from '@/config'
 import { useToastStore } from '@/stores/toast'
 import MeditateBar from '@/components/MeditateBar.vue'
 import DazuoPanel from '@/components/DazuoPanel.vue'
@@ -151,6 +164,9 @@ import RetreatPanel from '@/components/RetreatPanel.vue'
 import BreakthroughPanel from '@/components/BreakthroughPanel.vue'
 import AudioControl from '@/components/AudioControl.vue'
 import ReincarnationRecords from '@/components/ReincarnationRecords.vue'
+import SpiritStoneExchange from '@/components/SpiritStoneExchange.vue'
+import ShopPanel from '@/components/ShopPanel.vue'
+import ItemRing from '@/components/ItemRing.vue'
 
 const store = usePlayerStore()
 const auth = useAuthStore()
@@ -158,7 +174,7 @@ const toast = useToastStore()
 
 onMounted(() => store.load())
 
-const page = ref<'main' | 'settings' | 'path'>('main')
+const page = ref<'main' | 'settings' | 'path' | 'market'>('main')
 const pathTab = ref<'game' | 'heart'>('game')
 const asking = ref(false)
 
@@ -205,6 +221,17 @@ const lifePercent = computed(() => {
 })
 const hpPercent = computed(() => Math.min(100, Math.max(0, store.player?.hp ?? 0)))
 const cultivateRateText = computed(() => (store.player?.cultivate_rate ?? 1).toFixed(2))
+
+// 四级灵石展示（下/中/上/极）
+const stoneList = computed(() => {
+  const stones = store.player?.spirit_stones as Record<string, number> | undefined
+  if (!stones) return []
+  return economyConfig.spirit_stone_levels.map((level) => ({
+    level,
+    short: spiritStoneLabels[level] ?? level,
+    amount: stones[level] ?? 0,
+  }))
+})
 </script>
 
 <style scoped>
@@ -323,6 +350,31 @@ const cultivateRateText = computed(() => (store.player?.cultivate_rate ?? 1).toF
   color: var(--muted);
   font-size: 9px;
 }
+.stone-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 8px;
+}
+.stone-grid div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 5px;
+  overflow: hidden;
+}
+.stone-grid em {
+  color: var(--muted);
+  font-size: 10px;
+  font-style: normal;
+}
+.stone-grid b {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .attribute-track {
   height: 3px;
   margin-top: 7px;
@@ -372,6 +424,15 @@ const cultivateRateText = computed(() => (store.player?.cultivate_rate ?? 1).toF
   transition: width .9s cubic-bezier(.22, .61, .36, 1);
 }
 
+.entry-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+.entry-row button {
+  width: 100%;
+}
 .path-entry {
   width: 100%;
   margin-top: 12px;

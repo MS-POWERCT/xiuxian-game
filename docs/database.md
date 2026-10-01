@@ -7,15 +7,16 @@
 
 ## 一、表与职责
 
-| 表                    | 职责                        |
-| --------------------- | --------------------------- |
-| users                 | 账号（实名年龄）            |
-| players               | 玩家角色状态（核心）        |
-| retreats              | 闭关记录                    |
-| reincarnation_records | 前世档案（转世/死亡时快照） |
-| admin_users           | 后台管理员账号              |
-| admin_login_logs      | 后台登录、失败和锁定审计    |
-| admin_operation_logs  | 后台敏感操作审计            |
+| 表                    | 职责                         |
+| --------------------- | ---------------------------- |
+| users                 | 账号（实名年龄）             |
+| players               | 玩家角色状态（核心）         |
+| retreats              | 闭关记录                     |
+| reincarnation_records | 前世档案（转世/死亡时快照）  |
+| player_items          | 储物戒（物品堆叠，不含灵石） |
+| admin_users           | 后台管理员账号               |
+| admin_login_logs      | 后台登录、失败和锁定审计     |
+| admin_operation_logs  | 后台敏感操作审计             |
 
 > 玩家运行时状态与后台安全审计分开；后台表仅服务管理端，不参与游戏数值计算。
 
@@ -23,17 +24,17 @@
 
 ## 二、users（账号）
 
-| 字段         | 类型               | 说明                                        |
-| ------------ | ------------------ | ------------------------------------------- |
-| id                 | BIGINT UNSIGNED PK | 自增                                        |
-| email              | VARCHAR(255)       | 登录邮箱，唯一索引                          |
-| password_hash      | VARCHAR(255)       | bcrypt 密码哈希，绝不明文                   |
-| realname_age       | TINYINT NULL       | 实名接口取到的真实年龄（未成年可能为 NULL） |
-| auth_token         | VARCHAR(64) NULL   | 玩家登录令牌                                |
-| token_expires_at   | INT UNSIGNED NULL  | 玩家令牌过期时间                            |
-| realname_bound_at  | INT UNSIGNED NULL  | 实名绑定时间                                |
-| created_at         | INT UNSIGNED       | 注册时间（秒）                              |
-| updated_at         | INT UNSIGNED       | 更新时间（秒）                              |
+| 字段              | 类型               | 说明                                        |
+| ----------------- | ------------------ | ------------------------------------------- |
+| id                | BIGINT UNSIGNED PK | 自增                                        |
+| email             | VARCHAR(255)       | 登录邮箱，唯一索引                          |
+| password_hash     | VARCHAR(255)       | bcrypt 密码哈希，绝不明文                   |
+| realname_age      | TINYINT NULL       | 实名接口取到的真实年龄（未成年可能为 NULL） |
+| auth_token        | VARCHAR(64) NULL   | 玩家登录令牌                                |
+| token_expires_at  | INT UNSIGNED NULL  | 玩家令牌过期时间                            |
+| realname_bound_at | INT UNSIGNED NULL  | 实名绑定时间                                |
+| created_at        | INT UNSIGNED       | 注册时间（秒）                              |
+| updated_at        | INT UNSIGNED       | 更新时间（秒）                              |
 
 **规则：不存原始身份证号**，只存年龄。
 
@@ -43,27 +44,27 @@
 
 对应 `docs/api.md` 中的 `player` 对象。
 
-| 字段          | 类型               | 说明                                        | 来源       |
-| ------------- | ------------------ | ------------------------------------------- | ---------- |
-| id            | BIGINT UNSIGNED PK | 自增                                        | —          |
-| user_id       | BIGINT UNSIGNED    | 关联 users.id                               | —          |
-| life_no       | INT UNSIGNED       | 当前第几世（从 1 开始）                     | 状态       |
-| name          | VARCHAR(32)        | 道号                                        | 创建时生成 |
-| realm_id      | VARCHAR(16)        | 境界 id（qi/zhuji/jindan/yuanying/huashen） | 状态       |
-| stage_index   | TINYINT UNSIGNED   | 当前小阶段下标                              | 状态       |
-| exp           | INT UNSIGNED       | 当前小阶段内修为                            | 状态       |
-| age           | INT UNSIGNED       | 游戏内年龄（年）                            | 状态       |
-| lifespan_max  | INT UNSIGNED       | 寿命上限（年，冗余存，取自 realms.json）    | 派生       |
-| hp            | TINYINT UNSIGNED   | 气血 0-100                                  | 状态       |
-| spirit_stones | INT UNSIGNED       | 灵石                                        | 状态       |
-| alive         | TINYINT(1)         | 是否存活 1/0                                | 状态       |
-| status        | VARCHAR(16)        | idle/retreating/meditating/exploring/dead   | 状态       |
-| meditation_start_at    | INT UNSIGNED | 当前冥想开始时间，无冥想时为 NULL | 状态 |
-| meditation_finish_at   | INT UNSIGNED | 当前冥想结束时间，无冥想时为 NULL | 状态 |
-| meditation_duration    | INT UNSIGNED | 当前冥想时长（秒），无冥想时为 NULL | 状态 |
-| meditation_expected_exp| INT UNSIGNED | 当前冥想预计收益，无冥想时为 NULL | 状态 |
-| created_at    | INT UNSIGNED       | 创角时间（秒）                              | —          |
-| updated_at    | INT UNSIGNED       | 更新时间（秒）                              | —          |
+| 字段                    | 类型               | 说明                                         | 来源       |
+| ----------------------- | ------------------ | -------------------------------------------- | ---------- |
+| id                      | BIGINT UNSIGNED PK | 自增                                         | —          |
+| user_id                 | BIGINT UNSIGNED    | 关联 users.id                                | —          |
+| life_no                 | INT UNSIGNED       | 当前第几世（从 1 开始）                      | 状态       |
+| name                    | VARCHAR(32)        | 道号                                         | 创建时生成 |
+| realm_id                | VARCHAR(16)        | 境界 id（qi/zhuji/jindan/yuanying/huashen）  | 状态       |
+| stage_index             | TINYINT UNSIGNED   | 当前小阶段下标                               | 状态       |
+| exp                     | INT UNSIGNED       | 当前小阶段内修为                             | 状态       |
+| age                     | INT UNSIGNED       | 游戏内年龄（年）                             | 状态       |
+| lifespan_max            | INT UNSIGNED       | 寿命上限（年，冗余存，取自 realms.json）     | 派生       |
+| hp                      | TINYINT UNSIGNED   | 气血 0-100                                   | 状态       |
+| spirit_stones           | JSON               | 灵石，四级分开计数 `{ low, mid, high, top }` | 状态       |
+| alive                   | TINYINT(1)         | 是否存活 1/0                                 | 状态       |
+| status                  | VARCHAR(16)        | idle/retreating/meditating/exploring/dead    | 状态       |
+| meditation_start_at     | INT UNSIGNED       | 当前冥想开始时间，无冥想时为 NULL            | 状态       |
+| meditation_finish_at    | INT UNSIGNED       | 当前冥想结束时间，无冥想时为 NULL            | 状态       |
+| meditation_duration     | INT UNSIGNED       | 当前冥想时长（秒），无冥想时为 NULL          | 状态       |
+| meditation_expected_exp | INT UNSIGNED       | 当前冥想预计收益，无冥想时为 NULL            | 状态       |
+| created_at              | INT UNSIGNED       | 创角时间（秒）                               | —          |
+| updated_at              | INT UNSIGNED       | 更新时间（秒）                               | —          |
 
 **说明：**
 
@@ -111,7 +112,7 @@
 | age            | INT UNSIGNED       | 该世死亡时年龄（游戏内年）                                         |
 | lifespan_max   | INT UNSIGNED       | 该世寿命上限（年）                                                 |
 | hp             | TINYINT UNSIGNED   | 该世最终气血                                                       |
-| spirit_stones  | INT UNSIGNED       | 该世最终灵石                                                       |
+| spirit_stones  | JSON               | 该世最终灵石，四级对象 `{ low, mid, high, top }`                   |
 | cultivate_rate | FLOAT              | 该世年龄补偿效率系数                                               |
 | total_days     | INT UNSIGNED       | 该世真实游玩天数（创角到死亡）                                     |
 | death_reason   | VARCHAR(16)        | 死亡原因：`lifespan` 寿元耗尽 / `self` 主动兵解 / `relic` 遗迹陨落 |
@@ -121,30 +122,53 @@
 **规则：**
 
 - 快照字段与 players 表保持对齐，转世那一刻复制，之后不再变动
-- 物品（丹药/法宝等）当前无背包系统，暂不纳入快照，等背包系统上线再补
+- `spirit_stones` 为四级对象快照（`{ low, mid, high, top }`）
+- 物品（储物戒）暂不纳入快照，后续需要再补
 - `life_no` 由该 user 已有前世数 + 1 生成
 
 ---
 
-## 六、后台管理表
+## 六、player_items（储物戒）
+
+只存放物品（丹药、法阵、功法、符箓、材料），**不放灵石**。灵石存于 `players.spirit_stones`。
+
+| 字段       | 类型               | 说明                                                  |
+| ---------- | ------------------ | ----------------------------------------------------- |
+| id         | BIGINT UNSIGNED PK | 自增                                                  |
+| player_id  | BIGINT UNSIGNED    | 关联 players.id                                       |
+| item_id    | VARCHAR(64)        | 物品 id（对应 shop.json 的 `ref_id` / pills.json 等） |
+| category   | VARCHAR(32)        | pill / formation / technique / talisman / material    |
+| quantity   | INT UNSIGNED       | 数量                                                  |
+| created_at | INT UNSIGNED       | 获得时间（秒）                                        |
+| updated_at | INT UNSIGNED       | 更新时间（秒）                                        |
+
+**规则：**
+
+- 唯一索引 `(player_id, item_id)`，同一物品叠加数量
+- 商店购买成功 → 扣灵石 → 本表入账；后续闭关/突破消耗物品 → 扣减本表数量
+- 物品展示名不落库，由 `config/shop.json`、`config/pills.json` 实时翻译
+
+---
+
+## 七、后台管理表
 
 ### admin_users（管理员账号）
 
-| 字段                     | 类型               | 说明                                      |
-| ------------------------ | ------------------ | ----------------------------------------- |
-| id                       | BIGINT UNSIGNED PK | 自增                                      |
-| username                 | VARCHAR(32)        | 唯一管理员账号                            |
-| password_hash            | VARCHAR(255)       | bcrypt 密码哈希，绝不明文                 |
-| is_enabled               | TINYINT(1)         | 是否启用                                  |
-| auth_token_hash          | CHAR(64) NULL      | 后台登录令牌的 SHA-256 哈希，不存原文     |
-| auth_token_expires_at    | INT UNSIGNED NULL  | 后台令牌过期时间                          |
-| failed_login_count       | TINYINT UNSIGNED   | 连续登录失败次数                          |
-| locked_until             | INT UNSIGNED NULL  | 登录锁定截止时间                          |
-| sensitive_fail_count     | TINYINT UNSIGNED   | 敏感操作密码连续失败次数                  |
-| sensitive_locked_until   | INT UNSIGNED NULL  | 敏感操作锁定截止时间                      |
-| last_login_at            | INT UNSIGNED NULL  | 最后登录时间                              |
-| last_login_ip            | VARCHAR(45) NULL   | 最后登录 IP                               |
-| created_at / updated_at  | INT UNSIGNED       | 创建、更新时间（秒）                      |
+| 字段                    | 类型               | 说明                                  |
+| ----------------------- | ------------------ | ------------------------------------- |
+| id                      | BIGINT UNSIGNED PK | 自增                                  |
+| username                | VARCHAR(32)        | 唯一管理员账号                        |
+| password_hash           | VARCHAR(255)       | bcrypt 密码哈希，绝不明文             |
+| is_enabled              | TINYINT(1)         | 是否启用                              |
+| auth_token_hash         | CHAR(64) NULL      | 后台登录令牌的 SHA-256 哈希，不存原文 |
+| auth_token_expires_at   | INT UNSIGNED NULL  | 后台令牌过期时间                      |
+| failed_login_count      | TINYINT UNSIGNED   | 连续登录失败次数                      |
+| locked_until            | INT UNSIGNED NULL  | 登录锁定截止时间                      |
+| sensitive_fail_count    | TINYINT UNSIGNED   | 敏感操作密码连续失败次数              |
+| sensitive_locked_until  | INT UNSIGNED NULL  | 敏感操作锁定截止时间                  |
+| last_login_at           | INT UNSIGNED NULL  | 最后登录时间                          |
+| last_login_ip           | VARCHAR(45) NULL   | 最后登录 IP                           |
+| created_at / updated_at | INT UNSIGNED       | 创建、更新时间（秒）                  |
 
 ### admin_login_logs（管理员登录审计）
 

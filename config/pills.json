@@ -37,6 +37,15 @@
       "max_per_retreat": null,
       "effect_by_use": [10, 5, 2, 1, 0],
       "price_by_use": [5000, 10000, 20000, 40000]
+    },
+    {
+      "id": "juqi_san",
+      "name": "聚气散",
+      "effect_type": "meditation_buff",
+      "effect_value": 0.05,
+      "price": 10,
+      "unlock_realm": null,
+      "max_per_retreat": null
     }
   ]
 }

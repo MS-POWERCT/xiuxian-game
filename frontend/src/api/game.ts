@@ -2,6 +2,14 @@ import { http } from './http'
 
 export type PlayerStatus = 'idle' | 'retreating' | 'meditating' | 'exploring' | 'dead'
 
+// 灵石四级（下/中/上/极），分开计数
+export interface SpiritStones {
+  low: number
+  mid: number
+  high: number
+  top: number
+}
+
 export interface Player {
   id: number
   life_no: number
@@ -12,7 +20,7 @@ export interface Player {
   age: number
   lifespan_max: number
   hp: number
-  spirit_stones: number
+  spirit_stones: SpiritStones
   cultivate_rate: number
   speed_bonus: number
   status: PlayerStatus
@@ -29,7 +37,7 @@ export interface ReincarnationRecord {
   age: number
   lifespan_max: number
   hp: number
-  spirit_stones: number
+  spirit_stones: SpiritStones
   cultivate_rate: number
   total_days: number
   death_reason: 'lifespan' | 'self' | 'relic'
@@ -111,4 +119,51 @@ export function reincarnate() {
 }
 export function getReincarnationRecords() {
   return http.get<{ records: ReincarnationRecord[] }>('/reincarnate/records')
+}
+
+// ==================== 灵石 / 商店 / 储物戒 ====================
+
+export interface ShopItem {
+  id: string
+  name: string
+  category: string
+  ref_id: string
+  price: number
+  currency_level: string
+}
+
+export interface ItemEntry {
+  item_id: string
+  name: string
+  category: string
+  quantity: number
+  created_at: number
+  updated_at: number
+}
+
+export function getSpiritStones() {
+  return http.get<{ stones: SpiritStones }>('/spirit-stones')
+}
+export function exchangeSpiritStones(from_level: string, to_level: string, amount: number) {
+  return http.post<{ stones: SpiritStones; cost: number; fee: number }>('/spirit-stones/exchange', {
+    from_level,
+    to_level,
+    amount,
+  })
+}
+export function getShop() {
+  return http.get<{ items: ShopItem[] }>('/shop')
+}
+export function buyShopItem(item_id: string, quantity: number) {
+  return http.post<{
+    item_id: string
+    name: string
+    quantity: number
+    cost: number
+    currency_level: string
+    stones: SpiritStones
+  }>('/shop/buy', { item_id, quantity })
+}
+export function getItems() {
+  return http.get<{ items: ItemEntry[] }>('/items')
 }

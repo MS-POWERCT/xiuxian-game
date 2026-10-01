@@ -16,6 +16,7 @@ class AdminTableService
         'players' => ['label' => '玩家角色', 'group' => 'game'],
         'reincarnation_records' => ['label' => '前世档案', 'group' => 'game'],
         'retreats' => ['label' => '闭关记录', 'group' => 'game'],
+        'player_items' => ['label' => '储物戒', 'group' => 'game'],
         'admin_users' => ['label' => '管理员账号', 'group' => 'admin'],
         'admin_login_logs' => ['label' => '管理员登录日志', 'group' => 'admin'],
         'admin_operation_logs' => ['label' => '管理员操作日志', 'group' => 'admin'],
@@ -57,6 +58,9 @@ class AdminTableService
         'death_reason' => '死亡原因',
         'death_at' => '死亡时间',
         'player_id' => '玩家ID',
+        'item_id' => '物品ID',
+        'category' => '分类',
+        'quantity' => '数量',
         'technique_id' => '功法ID',
         'formation_id' => '法阵ID',
         'pill_ids' => '丹药ID列表',
@@ -218,7 +222,8 @@ class AdminTableService
         foreach ($stmt->fetchAll() as $row) {
             $field = (string)$row['Field'];
             $type = strtolower((string)$row['Type']);
-            if (preg_match('/^[A-Za-z0-9_]+$/', $field)
+            if (
+                preg_match('/^[A-Za-z0-9_]+$/', $field)
                 && preg_match('/char|text|enum|date|time/', $type)
             ) {
                 $columns[] = $field;
