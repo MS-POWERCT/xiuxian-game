@@ -1,0 +1,45 @@
+{
+  "config_names": {
+    "audio": "音频映射",
+    "breakthrough": "突破与渡劫",
+    "economy": "灵石化与上限",
+    "formations": "法阵",
+    "labels": "文案映射",
+    "lifecycle": "寿命与轮回",
+    "materials": "材料",
+    "meditation": "冥想与闭关",
+    "patron": "庇护与上供",
+    "pills": "丹药",
+    "realms": "境界",
+    "relics": "遗迹",
+    "shop": "坊市商店",
+    "techniques": "功法",
+    "travel": "游历（模式与槽位）",
+    "travel_events": "游历事件库",
+    "unlock": "功能解锁"
+  },
+  "enums": {
+    "category": { "pill": "丹药", "formation": "法阵", "technique": "功法", "talisman": "符箓", "material": "材料" },
+    "quality": { "common": "普通", "rare": "稀有", "epic": "史诗" },
+    "travel_method": { "walk": "步行", "fly": "御剑飞行" },
+    "event_type": {
+      "patron_mortal": "凡人求助",
+      "patron_sect": "宗门事件",
+      "resource": "天材地宝",
+      "nothing": "无事发生"
+    },
+    "patron_kind": { "mortal": "凡人", "sect": "宗门" },
+    "sect_level": { "small": "小宗门", "large": "大宗门", "super": "超级宗门" },
+    "death_reason": { "lifespan": "寿元耗尽", "self": "主动兵解", "relic": "遗迹陨落" },
+    "player_status": { "idle": "空闲", "retreating": "闭关中", "meditating": "冥想中", "exploring": "探索中", "dead": "已死亡" },
+    "admin_action": {
+      "logout": "退出登录",
+      "config_save": "保存配置",
+      "config_restore": "恢复配置",
+      "player_spirit_stones": "增加灵石",
+      "retreat_finish_at": "调整闭关时间",
+      "travel_finish_at": "调整游历时间"
+    },
+    "target_type": { "admin": "管理员", "config": "配置", "player": "玩家", "retreat": "闭关记录", "travel": "游历记录" }
+  }
+}

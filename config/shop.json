@@ -9,6 +9,16 @@
       "currency_level": "low",
       "limit": null,
       "unlock": null
+    },
+    {
+      "id": "duan_yuan_ling",
+      "name": "断缘令",
+      "category": "talisman",
+      "ref_id": "duan_yuan_ling",
+      "price": 500,
+      "currency_level": "mid",
+      "limit": null,
+      "unlock": null
     }
   ]
 }

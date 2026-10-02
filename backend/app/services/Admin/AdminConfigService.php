@@ -4,6 +4,7 @@ namespace app\services\Admin;
 
 use app\support\AdminAudit;
 use app\support\AdminAuth;
+use app\support\GameConfig;
 use support\Request;
 use Throwable;
 use Webman\Http\Response;
@@ -19,10 +20,12 @@ class AdminConfigService
     public function list(Request $request): Response
     {
         $files = $this->configFiles();
+        $names = GameConfig::get('labels')['config_names'] ?? [];
         $rows = [];
         foreach ($files as $name => $file) {
             $rows[] = [
                 'name' => $name,
+                'label' => (string)($names[$name] ?? $name),
                 'file' => basename($file),
                 'size' => (int)filesize($file),
                 'updated_at' => (int)filemtime($file),

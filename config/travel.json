@@ -1,0 +1,20 @@
+{
+  "modes": [
+    {
+      "id": "normal",
+      "name": "普通游历",
+      "method": "walk",
+      "duration_minutes": 10,
+      "event_weights": { "common": 80, "rare": 18, "epic": 2 }
+    },
+    {
+      "id": "deep",
+      "name": "深度游历",
+      "method": "fly",
+      "duration_minutes": 120,
+      "event_weights": { "common": 40, "rare": 45, "epic": 15 }
+    }
+  ],
+  "max_event_slots": 4,
+  "event_expire_days": 3
+}

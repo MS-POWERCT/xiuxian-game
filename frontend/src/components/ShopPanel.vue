@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive } from 'vue'
-import { spiritStoneLabels } from '@/config'
+import { categoryLabels, spiritStoneLabels } from '@/config'
 import type { ShopItem } from '@/api/game'
 import { usePlayerStore } from '@/stores/player'
 import { useMarketStore } from '@/stores/market'
@@ -36,13 +36,6 @@ const player = usePlayerStore()
 const market = useMarketStore()
 const toast = useToastStore()
 
-const categoryLabels: Record<string, string> = {
-  pill: '丹药',
-  formation: '法阵',
-  technique: '功法',
-  talisman: '符箓',
-  material: '材料',
-}
 function categoryLabel(category: string) {
   return categoryLabels[category] ?? category
 }

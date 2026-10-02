@@ -167,3 +167,91 @@ export function buyShopItem(item_id: string, quantity: number) {
 export function getItems() {
   return http.get<{ items: ItemEntry[] }>('/items')
 }
+
+// ==================== 游历 / 事件 / 庇护 ====================
+
+export interface TravelMode {
+  id: string
+  name: string
+  duration_minutes: number
+  event_weights: Record<string, number>
+}
+
+export interface TravelEvent {
+  id: number
+  event_id: string
+  name: string
+  desc: string
+  quality: string
+  type: string
+  created_at: number
+  expire_at: number
+}
+
+export interface ActiveTravel {
+  travel_id: number
+  mode_id: string
+  mode_name: string
+  start_at: number
+  finish_at: number
+}
+
+export interface TravelState {
+  max_slots: number
+  events: TravelEvent[]
+  active_travel: ActiveTravel | null
+}
+
+export interface Patron {
+  id: number
+  kind: 'mortal' | 'sect'
+  sect_level: string
+  sect_name: string
+  count: number
+  interval_hours: number
+  max_accumulate: number
+  cycles: number
+  applied_cycles: number
+  pending: SpiritStones
+  last_supply_at: number
+  next_supply_at: number
+}
+
+export interface ResolveResult {
+  event_id: string
+  type: string
+  patron: { kind: string; count?: number; sect_level?: string; sect_name?: string } | null
+  stones: SpiritStones | null
+  items: { item_id: string; name: string; category: string; quantity: number }[] | null
+}
+
+export function getTravel() {
+  return http.get<TravelState>('/travel')
+}
+export function startTravel(mode_id: string) {
+  return http.post<{
+    travel_id: number
+    mode_id: string
+    mode_name: string
+    start_at: number
+    finish_at: number
+  }>('/travel/start', { mode_id })
+}
+export function resolveTravelEvent(id: number) {
+  return http.post<ResolveResult>(`/travel/events/${id}/resolve`, {})
+}
+export function abandonTravelEvent(id: number) {
+  return http.post<{ event_id: string }>(`/travel/events/${id}/abandon`, {})
+}
+export function getPatrons() {
+  return http.get<{ patrons: Patron[]; total_pending: SpiritStones; stones: SpiritStones }>('/patrons')
+}
+export function claimPatrons() {
+  return http.post<{ claimed: number; total: SpiritStones; stones: SpiritStones }>('/patrons/claim', {})
+}
+export function releasePatron(id: number) {
+  return http.post<{ id: number; sect_level: string; item_id: string; cost: number }>(
+    `/patrons/${id}/release`,
+    {}
+  )
+}

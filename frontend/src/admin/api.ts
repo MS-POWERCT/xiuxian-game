@@ -83,6 +83,12 @@ export const api = {
       `/retreats/${encodeURIComponent(String(id))}/finish-at`,
       payload
     ),
+  updateTravelFinishAt: (id: number, payload: { finish_at: number; password: string; reason: string }) =>
+    rawRequest<{ id: number; before_finish_at: number; finish_at: number }>(
+      'POST',
+      `/travels/${encodeURIComponent(String(id))}/finish-at`,
+      payload
+    ),
   grantSpiritStones: (playerId: number, payload: { amounts: Record<string, number>; password: string; reason: string }) =>
     rawRequest<SpiritStoneGrantResult>(
       'POST',
@@ -116,6 +122,7 @@ export interface Dashboard {
 
 export interface ConfigItem {
   name: string
+  label: string
   file: string
   size: number
   updated_at: number
@@ -155,6 +162,10 @@ export interface TableColumn {
   type?: string
   is_time: boolean
   masked: boolean
+  // 单元格值 → 中文（如 status=0 → 进行中）；null 表示该列无需翻译
+  value_labels?: Record<string, string> | null
+  // value_labels 是否为 JSON 数组（如 pill_ids）
+  multi?: boolean
 }
 
 export interface TableData {

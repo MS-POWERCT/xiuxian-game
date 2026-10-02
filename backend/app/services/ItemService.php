@@ -105,6 +105,11 @@ class ItemService
                 return (string)$pill['name'];
             }
         }
+        foreach (GameConfig::get('materials')['materials'] ?? [] as $material) {
+            if (($material['id'] ?? '') === $itemId) {
+                return (string)($material['name'] ?? $itemId);
+            }
+        }
         return $itemId;
     }
 

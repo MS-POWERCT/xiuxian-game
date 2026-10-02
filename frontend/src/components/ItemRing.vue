@@ -17,17 +17,11 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { categoryLabels } from '@/config'
 import { useMarketStore } from '@/stores/market'
 
 const market = useMarketStore()
 
-const categoryLabels: Record<string, string> = {
-  pill: '丹药',
-  formation: '法阵',
-  technique: '功法',
-  talisman: '符箓',
-  material: '材料',
-}
 function categoryLabel(category: string) {
   return categoryLabels[category] ?? category
 }

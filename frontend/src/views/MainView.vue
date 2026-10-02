@@ -127,6 +127,27 @@
             <strong>×{{ cultivateRateText }}</strong>
             <small>年龄补偿 {{ Math.round((store.player.cultivate_rate - 1) * 100) }}%</small>
           </div>
+          <!-- 庇护：各占一格，点击展开收益与领取 -->
+          <button
+            class="attribute-card plain patron-card"
+            :class="{ active: patronOpen }"
+            type="button"
+            data-sfx="click"
+            @click="patronOpen = !patronOpen"
+          >
+            <span>庇护凡人</span>
+            <strong>{{ mortalCount }}<small> / {{ mortalMax }} 人</small></strong>
+          </button>
+          <button
+            class="attribute-card plain patron-card"
+            :class="{ active: patronOpen }"
+            type="button"
+            data-sfx="click"
+            @click="patronOpen = !patronOpen"
+          >
+            <span>庇护宗门</span>
+            <strong>{{ sectCount }}<small> / {{ sectMax }} 个</small></strong>
+          </button>
         </div>
 
         <div id="exp-reward-target" class="cultivation-card">
@@ -138,10 +159,13 @@
         </div>
       </section>
 
+      <PatronPanel v-if="patronOpen" />
+
       <DazuoPanel />
       <MeditateBar />
       <RetreatPanel />
       <BreakthroughPanel />
+      <TravelPanel />
 
       <div class="entry-row">
         <button class="ghost" data-sfx="click" @click="page = 'market'">坊市</button>
@@ -156,8 +180,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
-import { economyConfig, realmOf, spiritStoneLabels } from '@/config'
+import { economyConfig, patronConfig, realmOf, spiritStoneLabels } from '@/config'
 import { useToastStore } from '@/stores/toast'
+import { useTravelStore } from '@/stores/travel'
 import MeditateBar from '@/components/MeditateBar.vue'
 import DazuoPanel from '@/components/DazuoPanel.vue'
 import RetreatPanel from '@/components/RetreatPanel.vue'
@@ -167,16 +192,29 @@ import ReincarnationRecords from '@/components/ReincarnationRecords.vue'
 import SpiritStoneExchange from '@/components/SpiritStoneExchange.vue'
 import ShopPanel from '@/components/ShopPanel.vue'
 import ItemRing from '@/components/ItemRing.vue'
+import TravelPanel from '@/components/TravelPanel.vue'
+import PatronPanel from '@/components/PatronPanel.vue'
 
 const store = usePlayerStore()
 const auth = useAuthStore()
 const toast = useToastStore()
+const travel = useTravelStore()
 
-onMounted(() => store.load())
+onMounted(() => {
+  store.load()
+  travel.loadPatrons().catch(() => {})
+})
 
 const page = ref<'main' | 'settings' | 'path' | 'market'>('main')
 const pathTab = ref<'game' | 'heart'>('game')
 const asking = ref(false)
+// 庇护详情默认收起，点击用户信息里的格子后展开
+const patronOpen = ref(false)
+
+const mortalMax = patronConfig.mortal.max_count
+const mortalCount = computed(() => travel.patrons.find((p) => p.kind === 'mortal')?.count ?? 0)
+const sectCount = computed(() => travel.patrons.filter((p) => p.kind === 'sect').length)
+const sectMax = computed(() => patronConfig.sect.max_count_by_realm[store.player?.realm_id ?? ''] ?? 0)
 
 const canReincarnate = computed(() => {
   const s = store.player?.status ?? 'idle'
@@ -349,6 +387,15 @@ const stoneList = computed(() => {
   margin-top: 3px;
   color: var(--muted);
   font-size: 9px;
+}
+/* 庇护格子：点击展开收益详情 */
+.patron-card {
+  width: 100%;
+  display: block;
+  text-align: left;
+}
+.patron-card.active {
+  border-color: rgba(126, 224, 126, .52);
 }
 .stone-grid {
   display: grid;

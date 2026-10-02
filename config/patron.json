@@ -1,0 +1,35 @@
+{
+  "mortal": {
+    "max_count": 100,
+    "supply_interval_hours": 6,
+    "supply_per_capita_low": 0.1,
+    "max_accumulate": 4
+  },
+  "sect": {
+    "max_count_by_realm": { "zhuji": 1, "jindan": 2, "yuanying": 3, "huashen": 4 },
+    "levels": {
+      "small": {
+        "name": "小宗门",
+        "supply_interval_hours": 6,
+        "supply": { "low": 50, "mid": 5 },
+        "max_accumulate": 4
+      },
+      "large": {
+        "name": "大宗门",
+        "supply_interval_hours": 6,
+        "supply": { "mid": 50, "high": 5 },
+        "max_accumulate": 4
+      },
+      "super": {
+        "name": "超级宗门",
+        "supply_interval_hours": 6,
+        "supply": { "high": 50, "top": 5 },
+        "max_accumulate": 4
+      }
+    }
+  },
+  "release": {
+    "item_id": "duan_yuan_ling",
+    "compensation_by_level": { "small": 1, "large": 2, "super": 3 }
+  }
+}

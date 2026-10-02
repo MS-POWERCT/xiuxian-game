@@ -34,10 +34,11 @@ class GameService
         'explore' => ['idle'],
         'reincarnate' => ['idle', 'dead'],
         'retreat_claim' => ['retreating'],
+        'travel' => ['idle', 'retreating'],
     ];
 
     // 状态互斥校验：状态允许则返回 null，否则返回错误响应
-    private function guard(array $row, string $action): ?\Webman\Http\Response
+    public function guard(array $row, string $action): ?\Webman\Http\Response
     {
         $status = $row['status'] ?? 'idle';
         if (!in_array($status, self::ACTION_STATUS[$action], true)) {
@@ -72,7 +73,7 @@ class GameService
     }
 
     // 统一功能解锁校验：未解锁返回错误响应，否则返回 null
-    private function guardUnlock(array $row, string $featureId): ?\Webman\Http\Response
+    public function guardUnlock(array $row, string $featureId): ?\Webman\Http\Response
     {
         $cond = $this->unlockCondition($featureId);
         if ($this->isUnlocked($row, $cond)) {
@@ -725,6 +726,12 @@ class GameService
     public function playerIdForUser(int $userId): int
     {
         return (int)$this->playerRow($userId)['id'];
+    }
+
+    // 供其他玩法服务复用：取该用户角色完整数据（不存在则创建，含自然时间结算）
+    public function playerRowForUser(int $userId): array
+    {
+        return $this->playerRow($userId);
     }
 
     // 取当前用户绑定的玩家，不存在则创建（一个账号一个角色）

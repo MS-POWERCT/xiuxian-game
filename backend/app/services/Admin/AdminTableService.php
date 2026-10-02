@@ -3,6 +3,7 @@
 namespace app\services\Admin;
 
 use app\support\Db;
+use app\support\GameConfig;
 use support\Request;
 use Webman\Http\Response;
 
@@ -17,6 +18,9 @@ class AdminTableService
         'reincarnation_records' => ['label' => '前世档案', 'group' => 'game'],
         'retreats' => ['label' => '闭关记录', 'group' => 'game'],
         'player_items' => ['label' => '储物戒', 'group' => 'game'],
+        'travels' => ['label' => '游历记录', 'group' => 'game'],
+        'player_events' => ['label' => '游历事件', 'group' => 'game'],
+        'player_patrons' => ['label' => '庇护对象', 'group' => 'game'],
         'admin_users' => ['label' => '管理员账号', 'group' => 'admin'],
         'admin_login_logs' => ['label' => '管理员登录日志', 'group' => 'admin'],
         'admin_operation_logs' => ['label' => '管理员操作日志', 'group' => 'admin'],
@@ -66,6 +70,15 @@ class AdminTableService
         'pill_ids' => '丹药ID列表',
         'expected_exp' => '预计收益',
         'finish_at' => '结束时间',
+        'mode_id' => '游历模式',
+        'event_id' => '事件ID',
+        'quality' => '品质',
+        'expire_at' => '过期时间',
+        'resolved_at' => '处理时间',
+        'kind' => '庇护类型',
+        'sect_level' => '宗门等级',
+        'count' => '数量',
+        'last_supply_at' => '上次结算时间',
         'username' => '管理员账号',
         'is_enabled' => '是否启用',
         'auth_token_hash' => '登录令牌哈希',
@@ -86,6 +99,39 @@ class AdminTableService
         'reason' => '操作原因',
         'detail' => '操作详情',
     ];
+
+    /**
+     * 表.列 → 单元格值翻译来源
+     * entity=按 id 查 config 中的名称；entity_multi=JSON 数组逐项翻译；
+     * 其余为 labels.json enums 的分组名。
+     */
+    private const VALUE_LABEL_SOURCES = [
+        'players' => ['realm_id' => 'entity', 'status' => 'player_status', 'alive' => 'bool'],
+        'reincarnation_records' => ['realm_id' => 'entity', 'death_reason' => 'death_reason'],
+        'retreats' => [
+            'status' => 'record_status',
+            'technique_id' => 'entity',
+            'formation_id' => 'entity',
+            'pill_ids' => 'entity_multi',
+        ],
+        'player_items' => ['item_id' => 'entity', 'category' => 'category'],
+        'travels' => ['mode_id' => 'entity', 'status' => 'record_status'],
+        'player_events' => ['event_id' => 'entity', 'quality' => 'quality', 'status' => 'event_status'],
+        'player_patrons' => ['kind' => 'patron_kind', 'sect_level' => 'sect_level'],
+        'admin_users' => ['is_enabled' => 'bool'],
+        'admin_login_logs' => ['success' => 'bool'],
+        'admin_operation_logs' => ['action' => 'admin_action', 'target_type' => 'target_type'],
+    ];
+
+    // 数字状态映射（不放 labels.json，避免 PHP 把数字键解码成列表）
+    private const NUMERIC_LABELS = [
+        'record_status' => [0 => '进行中', 1 => '已结算'],
+        'event_status' => [0 => '待处理', 1 => '已完成', 2 => '已放弃', 3 => '已过期'],
+        'bool' => [0 => '否', 1 => '是'],
+    ];
+
+    private static ?array $entityLabels = null;
+    private static ?array $enumLabels = null;
 
     public function index(Request $request): Response
     {
@@ -162,13 +208,15 @@ class AdminTableService
         return $this->ok([
             'table' => $table,
             'columns' => array_map(
-                static function (array $column) use ($masked, $labels): array {
+                function (array $column) use ($masked, $labels, $table): array {
                     return [
                         'name' => $column['name'],
                         'label' => $labels[$column['name']] ?? $column['name'],
                         'type' => $column['type'],
                         'is_time' => self::isTimeColumn($column['name']),
                         'masked' => in_array($column['name'], $masked, true),
+                        'multi' => (self::VALUE_LABEL_SOURCES[$table][$column['name']] ?? '') === 'entity_multi',
+                        'value_labels' => $this->valueLabels($table, $column['name']),
                     ];
                 },
                 $columnMeta
@@ -230,6 +278,76 @@ class AdminTableService
             }
         }
         return $columns;
+    }
+
+    /**
+     * 单元格值中文映射：返回「原值 → 中文」对象，无映射时返回 null。
+     * 输出统一用 (object) 保证是 JSON 对象（数字键也不会退化成数组）。
+     */
+    private function valueLabels(string $table, string $column): ?object
+    {
+        $source = self::VALUE_LABEL_SOURCES[$table][$column] ?? '';
+        if ($source === 'entity' || $source === 'entity_multi') {
+            $map = $this->entityLabels();
+        } elseif (isset(self::NUMERIC_LABELS[$source])) {
+            $map = self::NUMERIC_LABELS[$source];
+        } else {
+            $map = $this->enumLabels()[$source] ?? [];
+        }
+        return $map === [] ? null : (object)$map;
+    }
+
+    // config 内所有「id → 名称」：境界、丹药、法阵、功法、商店、材料、游历模式与事件
+    private function entityLabels(): array
+    {
+        if (self::$entityLabels !== null) {
+            return self::$entityLabels;
+        }
+        $map = [];
+        foreach (['realms' => 'realms', 'pills' => 'pills', 'formations' => 'formations', 'techniques' => 'techniques'] as $config => $key) {
+            foreach (GameConfig::get($config)[$key] ?? [] as $row) {
+                if (!empty($row['id'])) {
+                    $map[(string)$row['id']] = (string)($row['name'] ?? $row['id']);
+                }
+            }
+        }
+        foreach (GameConfig::get('shop')['items'] ?? [] as $row) {
+            if (empty($row['id'])) {
+                continue;
+            }
+            $map[(string)$row['id']] = (string)($row['name'] ?? $row['id']);
+            if (!empty($row['ref_id'])) {
+                $map[(string)$row['ref_id']] = (string)($row['name'] ?? $row['ref_id']);
+            }
+        }
+        foreach (GameConfig::get('travel')['modes'] ?? [] as $row) {
+            if (!empty($row['id'])) {
+                $map[(string)$row['id']] = (string)($row['name'] ?? $row['id']);
+            }
+        }
+        foreach (GameConfig::get('travel_events')['events'] ?? [] as $row) {
+            if (!empty($row['id'])) {
+                $map[(string)$row['id']] = (string)($row['name'] ?? $row['id']);
+            }
+        }
+        foreach (GameConfig::get('materials')['materials'] ?? [] as $row) {
+            if (!empty($row['id'])) {
+                $map[(string)$row['id']] = (string)($row['name'] ?? $row['id']);
+            }
+        }
+        self::$entityLabels = $map;
+        return $map;
+    }
+
+    // labels.json 的 enums 分组（字符串枚举）
+    private function enumLabels(): array
+    {
+        if (self::$enumLabels !== null) {
+            return self::$enumLabels;
+        }
+        $enums = GameConfig::get('labels')['enums'] ?? [];
+        self::$enumLabels = is_array($enums) ? $enums : [];
+        return self::$enumLabels;
     }
 
     private function ok(array $data = []): Response

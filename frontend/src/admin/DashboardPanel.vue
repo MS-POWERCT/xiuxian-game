@@ -1,8 +1,17 @@
 <template>
-  <section class="admin-grid">
-    <div class="stat-card" v-for="item in cards" :key="item.label">
-      <span>{{ item.label }}</span>
-      <strong>{{ item.value }}</strong>
+  <section>
+    <div class="panel-title">
+      <div>
+        <span>运行概览</span>
+        <small class="muted" v-if="data">数据时间 {{ formatTime(data.server_time) }}</small>
+      </div>
+      <button class="icon-btn" type="button" @click="emit('refresh')">刷新</button>
+    </div>
+    <div class="admin-grid">
+      <div class="stat-card" v-for="item in cards" :key="item.label">
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
+      </div>
     </div>
   </section>
 </template>
@@ -12,6 +21,7 @@ import { computed } from 'vue'
 import type { Dashboard } from './api'
 
 const props = defineProps<{ data: Dashboard | null }>()
+const emit = defineEmits<{ refresh: [] }>()
 
 const cards = computed(() => [
   { label: '用户账号', value: props.data?.users ?? '--' },

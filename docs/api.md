@@ -63,13 +63,15 @@
 | 渡劫突破 `breakthrough`   | idle                                       |
 | 遗迹探索 `relic`          | idle                                       |
 | 转世重修 `reincarnate`    | idle / dead                                |
+| 开始游历 `travel/start`   | idle / retreating                          |
 
 规则：
 
-- **冥想中（meditating）禁止**：再次冥想、闭关、探索、突破；感悟不受限制
-- **闭关中（retreating）禁止**：冥想、再次闭关、探索、突破；感悟不受限制
+- **冥想中（meditating）禁止**：再次冥想、闭关、探索、突破、游历；感悟不受限制
+- **闭关中（retreating）禁止**：冥想、再次闭关、探索、突破；感悟不受限制（游历允许）
 - **死后（dead）禁止**：感悟、冥想、闭关、探索、突破，仅允许转世
 - 感悟是即时动作，不改变玩家当前状态，也不与冥想、闭关、探索互斥
+- 游历仅在「空闲」或「闭关中」可开始；庇护不参与状态互斥，仅受「已有游历进行中」「事件槽已满」限制
 - 校验由后端统一集中处理（入口 `guard`），前端禁用按钮仅作体验优化，真正拦截以后端为准
 
 ---
@@ -81,7 +83,8 @@
 ```json
 {
   "meditate_deep": { "name": "深度冥想", "realm_id": "qi", "stage": 3 },
-  "retreat": { "name": "闭关", "realm_id": "qi", "stage": 9 }
+  "retreat": { "name": "闭关", "realm_id": "qi", "stage": 9 },
+  "travel": { "name": "游历", "realm_id": "zhuji", "stage": 1 }
 }
 ```
 
@@ -682,6 +685,276 @@
 
 ---
 
+### 19. 游历状态
+
+`GET /api/travel`
+
+请求头：`Authorization: Bearer <token>`
+
+响应 data：
+
+```json
+{
+  "max_slots": 4,
+  "events": [
+    {
+      "id": 3,
+      "event_id": "sect_small_1",
+      "name": "邪物攻打青叶宗",
+      "desc": "邪物攻打青叶宗，你出手相助。",
+      "quality": "rare",
+      "type": "patron_sect",
+      "created_at": 1735560000,
+      "expire_at": 1735819200
+    }
+  ],
+  "active_travel": {
+    "travel_id": 8,
+    "mode_id": "normal",
+    "mode_name": "普通游历",
+    "start_at": 1735560000,
+    "finish_at": 1735560600
+  }
+}
+```
+
+业务规则：
+
+- 返回前先懒结算所有到期游历：按模式权重抽取事件写入空槽（离线同样累积），无空槽时不产出
+- 同时清理已过期事件（`status` 置为已过期）
+- `active_travel` 无进行中游历时为 `null`
+- 抽中「无事发生」（`type = nothing`）不占槽位
+- 数值取自 `config/travel.json`（`modes`、`max_event_slots`、`event_expire_days`）与 `config/travel_events.json`（`events`）
+
+错误码：
+
+- `5005` 未登录或登录已失效
+
+---
+
+### 20. 开始游历
+
+`POST /api/travel/start`
+
+请求头：`Authorization: Bearer <token>`
+
+请求：
+
+```json
+{ "mode_id": "normal" }
+```
+
+响应 data：
+
+```json
+{
+  "travel_id": 8,
+  "mode_id": "normal",
+  "mode_name": "普通游历",
+  "start_at": 1735560000,
+  "finish_at": 1735560600
+}
+```
+
+业务规则：
+
+- 需达到 `config/unlock.json` 中 `travel` 要求的境界（筑基一层）才开放
+- 模式与耗时取自 `config/travel.json` 的 `modes`
+- 同一时间只允许一次游历；事件槽已满时禁止开始
+- 仅「空闲」或「闭关中」可开始游历，冥想中禁止
+- 本期游历不消耗任何资源
+
+错误码：
+
+- `1003` 当前状态不允许该操作（如冥想中）
+- `1004` 功能未解锁（未达筑基）
+- `4008` 事件槽位已满
+- `4009` 已有游历进行中
+- `4012` 游历模式不存在
+- `5005` 未登录或登录已失效
+
+---
+
+### 21. 处理事件
+
+`POST /api/travel/events/{id}/resolve`
+
+请求头：`Authorization: Bearer <token>`
+
+请求：`{}`
+
+响应 data：
+
+```json
+{
+  "event_id": "resource_herb_1",
+  "type": "resource",
+  "patron": null,
+  "stones": null,
+  "items": [
+    {
+      "item_id": "lingcao_10",
+      "name": "灵草（十年）",
+      "category": "material",
+      "quantity": 1
+    }
+  ]
+}
+```
+
+- `patron`：产出庇护对象时为对象，否则为 `null`；`stones`、`items` 同理
+- `items`：产出储物戒物品时返回已入账条目（含展示名），否则为 `null`
+
+业务规则：
+
+- 按事件 `type` 产出：
+  - `patron_mortal`：庇护凡人 +N（`reward.patron_mortal`）
+  - `patron_sect`：庇护对应等级宗门（`reward.patron_sect` 为 `small` / `large` / `super`）
+  - `resource`：一次性资源，`reward.stones` 发灵石（走统一灵石服务，受 `spirit_stone_caps` 限制），`reward.item` 发储物戒物品（`{ id, quantity }`，类别取自 `config/materials.json`）
+  - `nothing`：无产出
+- 宗门庇护名额满或凡人达上限时返回错误，并**保留事件在槽位**
+- 本期不接入战斗与难度判定，事件直接完成
+- 事件配置取自 `config/travel_events.json` 的 `events`（同品质内按 `weight` 抽取，`weight` 缺省为 1 等权）
+
+错误码：
+
+- `1000` 事件奖励配置无效
+- `4006` 宗门庇护名额已满
+- `4007` 凡人庇护已达上限
+- `4011` 事件不存在或已失效
+- `5005` 未登录或登录已失效
+
+---
+
+### 22. 放弃事件
+
+`POST /api/travel/events/{id}/abandon`
+
+请求头：`Authorization: Bearer <token>`
+
+请求：`{}`
+
+响应 data：
+
+```json
+{ "event_id": "mortal_robber_1" }
+```
+
+业务规则：
+
+- 放弃后事件离开槽位，腾出空位
+- 已处理 / 已过期的事件不可放弃
+
+错误码：
+
+- `4011` 事件不存在或已失效
+- `5005` 未登录或登录已失效
+
+---
+
+### 23. 庇护列表
+
+`GET /api/patrons`
+
+请求头：`Authorization: Bearer <token>`
+
+响应 data：
+
+```json
+{
+  "patrons": [
+    {
+      "id": 1,
+      "kind": "mortal",
+      "sect_level": "",
+      "sect_name": "凡人",
+      "count": 5,
+      "interval_hours": 6,
+      "max_accumulate": 4,
+      "cycles": 3,
+      "applied_cycles": 3,
+      "pending": { "low": 1, "mid": 0, "high": 0, "top": 0 },
+      "last_supply_at": 1735560000,
+      "next_supply_at": 1735581600
+    }
+  ],
+  "total_pending": { "low": 1, "mid": 0, "high": 0, "top": 0 },
+  "stones": { "low": 4500, "mid": 12, "high": 0, "top": 0 }
+}
+```
+
+业务规则：
+
+- 返回所有庇护对象，并给出各自**待领取预览**与合计 `total_pending`
+- 待领取只是预览，不会自动入账
+- `cycles` 为已过整周期数，`applied_cycles = min(cycles, max_accumulate)`
+- 凡人上供按 `floor(count × supply_per_capita_low × applied_cycles)` 取整
+- 数值取自 `config/patron.json` 的 `mortal` 与 `sect`
+
+错误码：
+
+- `5005` 未登录或登录已失效
+
+---
+
+### 24. 领取上供
+
+`POST /api/patrons/claim`
+
+请求头：`Authorization: Bearer <token>`
+
+请求：`{}`
+
+响应 data：
+
+```json
+{
+  "claimed": 2,
+  "total": { "low": 1, "mid": 0, "high": 5, "top": 0 },
+  "stones": { "low": 4501, "mid": 12, "high": 5, "top": 0 }
+}
+```
+
+业务规则：
+
+- 遍历所有庇护对象结算上供，`last_supply_at` 追平到当前周期边界
+- 超出 `max_accumulate` 的周期直接丢弃
+- 产出写入灵石，超出 `spirit_stone_caps` 的部分直接丢弃
+
+错误码：
+
+- `5005` 未登录或登录已失效
+
+---
+
+### 25. 解除宗门庇护
+
+`POST /api/patrons/{id}/release`
+
+请求头：`Authorization: Bearer <token>`
+
+请求：`{}`
+
+响应 data：
+
+```json
+{ "id": 2, "sect_level": "small", "item_id": "duan_yuan_ling", "cost": 1 }
+```
+
+业务规则：
+
+- 仅可解除宗门庇护，凡人庇护不可解除
+- 消耗 `config/patron.json` 的 `release` 配置指定的商店道具（断缘令），数量按宗门等级（小 1 / 大 2 / 超级 3）
+- 断缘令通过商店购买（`config/shop.json`）
+
+错误码：
+
+- `1000` 庇护对象不存在
+- `4010` 断缘令不足
+- `5005` 未登录或登录已失效
+
+---
+
 ## 三、后台管理接口
 
 > 后台接口只允许管理员使用，前缀统一为 `/api/admin`，不得与玩家接口复用登录态。
@@ -811,6 +1084,7 @@
   "configs": [
     {
       "name": "realms",
+      "label": "境界",
       "file": "realms.json",
       "size": 1405,
       "updated_at": 1735560000,
@@ -823,6 +1097,7 @@
 业务规则：
 
 - 仅列出仓库根目录 `config/*.json`，不返回任意服务器路径。
+- `label` 为配置文件中文名，取自 `config/labels.json` 的 `config_names`，缺失时回退为配置名。
 - 配置名只允许小写字母、数字和下划线。
 - 拒绝符号链接、目录、空文件和超大文件。
 
@@ -1010,6 +1285,7 @@
 - `page_size` 最大 50，防止一次性拉取整表。
 - `keyword` 只在该表白名单文本列中搜索，使用 PDO 参数绑定，不拼接用户输入。
 - `columns[].label` 为字段中文名；`is_time = true` 的字段由前端统一格式化为本地时间。
+- `columns[].value_labels` 为「原值 → 中文」映射（如 `status` 的 `0 → 进行中`、`realm_id → 境界名`、`item_id → 物品名`）；`multi = true` 表示该列是 JSON 数组（如 `pill_ids`），由前端逐项翻译。无映射时为 `null`。
 - 表数据仅用于排查和审计，不提供通用写入接口。
 
 错误码：
@@ -1058,7 +1334,46 @@
 
 ---
 
-### 13. 给玩家增加灵石
+### 13. 调整游历归来时间（测试工具）
+
+`POST /api/admin/travels/{id}/finish-at`
+
+请求头：`X-CSRF-Token: <csrf_token>`
+
+请求：
+
+```json
+{
+  "finish_at": 1735560000,
+  "password": "当前管理员密码",
+  "reason": "测试游历立即归来"
+}
+```
+
+响应 data：
+
+```json
+{ "id": 41, "before_finish_at": 1735563600, "finish_at": 1735560000 }
+```
+
+业务规则：
+
+- 只允许修改 `status = 0` 的进行中游历记录，已结算游历不可改。
+- 只修改 `travels.finish_at`，不修改玩家状态；到期后由 `/api/travel` 懒结算按模式抽取事件。
+- 请求必须经过管理员登录、CSRF 校验、当前管理员密码二次确认，并填写 3-200 字测试原因。
+- 修改写入 `admin_operation_logs`（`action = travel_finish_at`、`target_type = travel`），记录修改前后时间戳。
+
+错误码：
+
+- `6005` 时间参数不正确
+- `6006` 管理员密码错误
+- `6007` 敏感操作已锁定
+- `6013` 游历记录不存在或已结束
+- `6014` 操作原因必填
+
+---
+
+### 14. 给玩家增加灵石
 
 `POST /api/admin/players/{id}/spirit-stones`
 

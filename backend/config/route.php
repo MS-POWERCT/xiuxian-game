@@ -22,6 +22,15 @@ Route::get('/api/shop', [app\controller\ShopController::class, 'index']); // 商
 Route::post('/api/shop/buy', [app\controller\ShopController::class, 'buy']); // 购买商品
 Route::get('/api/items', [app\controller\ItemController::class, 'index']); // 储物戒物品列表
 
+// 游历 / 事件 / 庇护（依据 docs/庇护游历事件系统设计.md）
+Route::get('/api/travel', [app\controller\TravelController::class, 'status']); // 游历状态（含事件槽）
+Route::post('/api/travel/start', [app\controller\TravelController::class, 'start']); // 开始游历
+Route::post('/api/travel/events/{id}/resolve', [app\controller\TravelController::class, 'resolve']); // 处理事件
+Route::post('/api/travel/events/{id}/abandon', [app\controller\TravelController::class, 'abandon']); // 放弃事件
+Route::get('/api/patrons', [app\controller\PatronController::class, 'index']); // 庇护列表
+Route::post('/api/patrons/claim', [app\controller\PatronController::class, 'claim']); // 领取上供
+Route::post('/api/patrons/{id}/release', [app\controller\PatronController::class, 'release']); // 解除宗门庇护
+
 // 用户账号模块（依据 docs/api.md）
 Route::post('/api/auth/register', [app\controller\AuthController::class, 'register']); // 邮箱注册
 Route::post('/api/auth/login', [app\controller\AuthController::class, 'login']); // 邮箱登录
@@ -46,6 +55,7 @@ Route::group('/api/admin', function () {
         Route::get('/tables', [app\controller\Admin\TableController::class, 'index']); // 数据表列表
         Route::get('/tables/{table}', [app\controller\Admin\TableController::class, 'show']); // 数据表内容
         Route::post('/retreats/{id}/finish-at', [app\controller\Admin\RetreatController::class, 'updateFinishAt']); // 调整进行中闭关结束时间（测试工具）
+        Route::post('/travels/{id}/finish-at', [app\controller\Admin\TravelController::class, 'updateFinishAt']); // 调整进行中游历归来时间（测试工具）
         Route::post('/players/{id}/spirit-stones', [app\controller\Admin\PlayerController::class, 'grantSpiritStones']); // 给玩家增加灵石
     })->middleware(app\middleware\AdminAuth::class);
 })->middleware(app\middleware\AdminSecurity::class);

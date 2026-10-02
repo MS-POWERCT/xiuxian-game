@@ -1,0 +1,14 @@
+{
+  "materials": [
+    {
+      "id": "lingcao_10",
+      "name": "灵草（十年）",
+      "category": "material"
+    },
+    {
+      "id": "lingcao_100",
+      "name": "灵草（百年）",
+      "category": "material"
+    }
+  ]
+}

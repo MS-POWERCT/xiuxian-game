@@ -1,34 +1,21 @@
 <template>
-  <section class="table-layout">
-    <aside class="table-list">
-      <div class="panel-title"><span>{{ tableGroupTitle }}</span></div>
-      <button
-        v-for="item in visibleTables"
-        :key="item.name"
-        type="button"
-        class="config-item"
-        :class="{ active: item.name === selectedTable }"
-        @click="selectTable(item.name)"
-      >
-        <span>{{ item.label }}</span>
-        <small>{{ item.name }}</small>
-      </button>
-      <p class="muted" v-if="visibleTables.length === 0">当前分组没有可展示的数据表。</p>
-    </aside>
-
+  <section>
     <div class="content-column">
       <div class="panel-title">
         <div>
-          <span>{{ selectedLabel || '表数据' }}</span>
+          <span>{{ tableLabel || '表数据' }}</span>
           <small class="muted" v-if="total > 0">共 {{ total }} 行</small>
         </div>
-        <form class="search-form" @submit.prevent="search">
-          <input v-model="keyword" type="search" placeholder="关键词搜索" />
-          <button type="submit" :disabled="loading">搜索</button>
-        </form>
+        <div class="button-row">
+          <button class="icon-btn" type="button" :disabled="!table || loading" @click="refresh">刷新</button>
+          <form class="search-form" @submit.prevent="search">
+            <input v-model="keyword" type="search" placeholder="关键词搜索" />
+            <button type="submit" :disabled="loading">搜索</button>
+          </form>
+        </div>
       </div>
 
-      <p class="notice">只读浏览，敏感字段已在服务端脱敏；敏感操作需二次确认并写入审计日志（闭关记录可调整结束时间，玩家角色可增加灵石）。</p>
+      <p class="notice">只读浏览，敏感字段已在服务端脱敏；敏感操作需二次确认并写入审计日志（闭关记录可调整结束时间，游历记录可调整归来时间，玩家角色可增加灵石）。</p>
 
       <div class="table-scroll" v-if="columns.length > 0">
         <table>
@@ -39,7 +26,7 @@
                 <span v-if="sort === col.name">{{ order === 'asc' ? '↑' : '↓' }}</span>
                 <small v-if="col.masked" class="masked-tag">脱敏</small>
               </th>
-              <th v-if="isRetreats">测试操作</th>
+              <th v-if="isRetreats || isTravels">测试操作</th>
               <th v-if="isPlayers">操作</th>
             </tr>
           </thead>
@@ -48,14 +35,14 @@
               <td v-for="col in columns" :key="col.name" :title="formatCell(row[col.name], col)">
                 {{ formatCell(row[col.name], col) }}
               </td>
-              <td v-if="isRetreats">
+              <td v-if="isRetreats || isTravels">
                 <button
                   v-if="row.status === 0 || row.status === '0'"
                   type="button"
                   class="ghost-btn"
-                  @click="openFinishDialog(row)"
+                  @click="openFinishDialog(row, isTravels ? 'travel' : 'retreat')"
                 >
-                  调整结束时间
+                  {{ isTravels ? '调整归来时间' : '调整结束时间' }}
                 </button>
                 <span v-else class="muted">已结束</span>
               </td>
@@ -81,8 +68,8 @@
 
   <div class="modal-mask" v-if="finishDialog">
     <div class="modal">
-      <h3>调整闭关结束时间</h3>
-      <p class="muted">只修改测试用的 `finish_at`，不会自动结算收益或改变玩家状态。</p>
+      <h3>{{ finishTarget === 'travel' ? '调整游历归来时间' : '调整闭关结束时间' }}</h3>
+      <p class="muted">只修改测试用的 finish_at，不会自动结算收益或改变玩家状态。</p>
       <label>
         新结束时间
         <input v-model="finishAtText" type="datetime-local" />
@@ -137,18 +124,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { AdminApiError, api, type TableColumn, type TableItem } from './api'
+import { computed, reactive, ref, watch } from 'vue'
+import { AdminApiError, api, type TableColumn } from './api'
 import { economyConfig, spiritStoneLabels } from '@/config'
 
-const props = withDefaults(defineProps<{ scope?: 'game' | 'admin'; initialTable?: string }>(), {
-  scope: 'game',
-  initialTable: '',
+const props = withDefaults(defineProps<{ table?: string; tableLabel?: string }>(), {
+  table: '',
+  tableLabel: '',
 })
 const emit = defineEmits<{ unauthorized: [] }>()
 
-const tables = ref<TableItem[]>([])
-const selectedTable = ref('')
 const columns = ref<TableColumn[]>([])
 const rows = ref<Record<string, unknown>[]>([])
 const page = ref(1)
@@ -160,13 +145,13 @@ const order = ref<'asc' | 'desc'>('desc')
 const loading = ref(false)
 const error = ref('')
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
-const visibleTables = computed(() => tables.value.filter((item) => item.group === props.scope))
-const selectedLabel = computed(() => visibleTables.value.find((item) => item.name === selectedTable.value)?.label || '')
-const isRetreats = computed(() => selectedTable.value === 'retreats')
-const isPlayers = computed(() => selectedTable.value === 'players')
-// 操作列数量：闭关记录 1 列，玩家角色 1 列
-const actionColumnCount = computed(() => (isRetreats.value ? 1 : 0) + (isPlayers.value ? 1 : 0))
-const tableGroupTitle = computed(() => (props.scope === 'game' ? '主业务数据' : '后台数据'))
+const isRetreats = computed(() => props.table === 'retreats')
+const isTravels = computed(() => props.table === 'travels')
+const isPlayers = computed(() => props.table === 'players')
+// 操作列数量：闭关/游历记录 1 列，玩家角色 1 列
+const actionColumnCount = computed(
+  () => (isRetreats.value || isTravels.value ? 1 : 0) + (isPlayers.value ? 1 : 0)
+)
 
 const finishDialog = ref(false)
 const finishBusy = ref(false)
@@ -174,7 +159,8 @@ const dialogError = ref('')
 const finishAtText = ref('')
 const finishPassword = ref('')
 const finishReason = ref('')
-const editingRetreatId = ref(0)
+const editingRecordId = ref(0)
+const finishTarget = ref<'retreat' | 'travel'>('retreat')
 
 function handleError(e: unknown) {
   if (e instanceof AdminApiError && e.code === 6001) {
@@ -184,29 +170,9 @@ function handleError(e: unknown) {
   error.value = e instanceof Error ? e.message : '请求失败'
 }
 
-async function loadTables() {
-  loading.value = true
-  error.value = ''
-  try {
-    tables.value = (await api.tables()).tables
-    const scoped = tables.value.filter((item) => item.group === props.scope)
-    const initial = props.initialTable && scoped.some((item) => item.name === props.initialTable)
-      ? props.initialTable
-      : scoped.some((item) => item.name === selectedTable.value)
-        ? selectedTable.value
-        : scoped[0]?.name || ''
-    selectedTable.value = ''
-    if (initial) await selectTable(initial)
-  } catch (e) {
-    handleError(e)
-  } finally {
-    loading.value = false
-  }
-}
-
+// 切换数据表：重置分页与排序后重新拉取
 async function selectTable(name: string) {
   if (!name) return
-  selectedTable.value = name
   page.value = 1
   keyword.value = ''
   sort.value = 'id'
@@ -214,12 +180,17 @@ async function selectTable(name: string) {
   await loadData()
 }
 
+// 刷新当前数据表
+function refresh() {
+  loadData()
+}
+
 async function loadData() {
-  if (!selectedTable.value) return
+  if (!props.table) return
   loading.value = true
   error.value = ''
   try {
-    const data = await api.table(selectedTable.value, {
+    const data = await api.table(props.table, {
       page: page.value,
       page_size: pageSize.value,
       keyword: keyword.value.trim(),
@@ -263,7 +234,7 @@ function sortBy(name: string) {
 }
 
 function rowKey(row: Record<string, unknown>, index: number): string {
-  return String(row.id ?? `${selectedTable.value}-${index}`)
+  return String(row.id ?? `${props.table}-${index}`)
 }
 
 function formatCell(value: unknown, column: TableColumn): string {
@@ -283,6 +254,21 @@ function formatCell(value: unknown, column: TableColumn): string {
   }
   if (typeof value === 'object') return JSON.stringify(value)
   const text = String(value)
+  // 枚举/ID 值翻译成中文（后端按表+列给出映射）
+  if (column.value_labels) {
+    if (column.multi) {
+      try {
+        const arr = JSON.parse(text)
+        if (Array.isArray(arr) && arr.length > 0) {
+          return arr.map((v) => column.value_labels?.[String(v)] ?? String(v)).join('、')
+        }
+      } catch {
+        /* 非 JSON 数组则按普通值处理 */
+      }
+    }
+    const label = column.value_labels[text]
+    if (label) return label
+  }
   return text.length > 240 ? `${text.slice(0, 240)}…` : text
 }
 
@@ -292,14 +278,15 @@ function toDatetimeLocal(timestamp: number): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-function openFinishDialog(row: Record<string, unknown>) {
+function openFinishDialog(row: Record<string, unknown>, target: 'retreat' | 'travel') {
   const id = Number(row.id)
   const finishAt = Number(row.finish_at)
   if (!Number.isFinite(id) || !Number.isFinite(finishAt)) return
-  editingRetreatId.value = id
+  editingRecordId.value = id
+  finishTarget.value = target
   finishAtText.value = toDatetimeLocal(finishAt)
   finishPassword.value = ''
-  finishReason.value = '测试闭关时间调整'
+  finishReason.value = target === 'travel' ? '测试游历时间调整' : '测试闭关时间调整'
   dialogError.value = ''
   finishDialog.value = true
 }
@@ -321,11 +308,16 @@ async function submitFinishDialog() {
   finishBusy.value = true
   dialogError.value = ''
   try {
-    await api.updateRetreatFinishAt(editingRetreatId.value, {
+    const payload = {
       finish_at: timestamp,
       password: finishPassword.value,
       reason: finishReason.value.trim(),
-    })
+    }
+    if (finishTarget.value === 'travel') {
+      await api.updateTravelFinishAt(editingRecordId.value, payload)
+    } else {
+      await api.updateRetreatFinishAt(editingRecordId.value, payload)
+    }
     finishDialog.value = false
     await loadData()
   } catch (e) {
@@ -433,6 +425,6 @@ async function submitStoneDialog() {
   }
 }
 
-onMounted(loadTables)
-watch(() => props.scope, loadTables)
+// 数据表由一级菜单的二级选择决定，切换时重置分页后重新拉取
+watch(() => props.table, selectTable, { immediate: true })
 </script>

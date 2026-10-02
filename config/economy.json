@@ -15,10 +15,10 @@
   },
   "spirit_stone_levels": ["low", "mid", "high", "top"],
   "spirit_stone_caps": {
-    "low": 1000000,
+    "low": 10000000,
     "mid": 1000000,
-    "high": 1000000,
-    "top": 1000000
+    "high": 100000,
+    "top": 10000
   },
   "exchange_ratio": 100,
   "exchange_fee_ratio": {

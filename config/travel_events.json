@@ -1,0 +1,495 @@
+{
+  "events": [
+    {
+      "id": "mortal_robber_1",
+      "name": "凡人被小怪打劫",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 10,
+      "desc": "你路过山道，见一小怪正打劫一名凡人，你出手赶走小怪。",
+      "reward": { "patron_mortal": 1 }
+    },
+    {
+      "id": "mortal_bandit_3",
+      "name": "三个女孩被土匪敲诈",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 8,
+      "desc": "三名女孩被土匪围住敲诈，你出手相救。",
+      "reward": { "patron_mortal": 3 }
+    },
+    {
+      "id": "mortal_cliff_1",
+      "name": "凡人摔下悬崖",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 10,
+      "desc": "一名凡人采药时摔下悬崖，你将他救起。",
+      "reward": { "patron_mortal": 1 }
+    },
+    {
+      "id": "mortal_flood_1",
+      "name": "洪水中的一家",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 8,
+      "desc": "洪水冲垮村庄，你救下一家三口。",
+      "reward": { "patron_mortal": 3 }
+    },
+    {
+      "id": "mortal_wolf_1",
+      "name": "狼群围村",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 5,
+      "desc": "狼群围攻小村，你驱散狼群，村民感恩。",
+      "reward": { "patron_mortal": 5 }
+    },
+    {
+      "id": "mortal_plague_1",
+      "name": "瘟疫中的医者",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 10,
+      "desc": "一名医者被困疫区，你护送他离开。",
+      "reward": { "patron_mortal": 1 }
+    },
+    {
+      "id": "mortal_caravan_1",
+      "name": "商队遇袭",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 6,
+      "desc": "商队被劫，你救下商队众人。",
+      "reward": { "patron_mortal": 5 }
+    },
+    {
+      "id": "mortal_child_1",
+      "name": "走失的孩童",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 10,
+      "desc": "你遇到一名走失孩童，将他送回村中。",
+      "reward": { "patron_mortal": 1 }
+    },
+    {
+      "id": "mortal_fire_1",
+      "name": "大火中的老人",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 10,
+      "desc": "村中起火，你冲入火场救出一名老人。",
+      "reward": { "patron_mortal": 1 }
+    },
+    {
+      "id": "mortal_bandit_5",
+      "name": "土匪窝",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 6,
+      "desc": "你端掉一个土匪窝，救出被掳的凡人。",
+      "reward": { "patron_mortal": 5 }
+    },
+    {
+      "id": "mortal_snake_1",
+      "name": "巨蛇挡路",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 10,
+      "desc": "巨蛇挡道，你斩杀巨蛇，救下过路凡人。",
+      "reward": { "patron_mortal": 1 }
+    },
+    {
+      "id": "mortal_storm_1",
+      "name": "风暴中的渔民",
+      "quality": "common",
+      "type": "patron_mortal",
+      "weight": 10,
+      "desc": "风暴中渔民落水，你将他救起。",
+      "reward": { "patron_mortal": 1 }
+    },
+
+    {
+      "id": "sect_small_1",
+      "name": "邪物攻打青叶宗",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 10,
+      "desc": "邪物攻打青叶宗，你出手相助。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_2",
+      "name": "白水门被围",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 10,
+      "desc": "白水门被邪物围困，你解围。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_3",
+      "name": "落霞谷遭袭",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 10,
+      "desc": "落霞谷遭邪物侵袭，你击退邪物。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_4",
+      "name": "清风观被攻打",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 10,
+      "desc": "清风观被邪物攻打，你相助。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_5",
+      "name": "玄石宗遇袭",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 10,
+      "desc": "玄石宗遇袭，你出手。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_6",
+      "name": "碧云门被围攻",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 10,
+      "desc": "碧云门被邪物围攻，你解围。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_7",
+      "name": "紫竹轩遭袭",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 10,
+      "desc": "紫竹轩遭袭，你相助。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_8",
+      "name": "金泉宗遇邪物",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 10,
+      "desc": "金泉宗遇邪物，你出手。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_9",
+      "name": "邪物攻打青云门",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 6,
+      "desc": "青云门虽是小宗门，却富甲一方，邪物来犯，你出手相助。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_10",
+      "name": "天机阁遇袭",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 6,
+      "desc": "天机阁虽是小宗门，底蕴却不输大宗，邪物来犯，你出手相助。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_11",
+      "name": "万宝楼被围攻",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 6,
+      "desc": "万宝楼虽是小宗门，家底殷实，邪物围攻，你解围。",
+      "reward": { "patron_sect": "small" }
+    },
+    {
+      "id": "sect_small_12",
+      "name": "灵药谷遭袭",
+      "quality": "rare",
+      "type": "patron_sect",
+      "weight": 6,
+      "desc": "灵药谷虽是小宗门，灵药无数，遭邪物侵袭，你出手。",
+      "reward": { "patron_sect": "small" }
+    },
+
+    {
+      "id": "sect_large_1",
+      "name": "邪物攻打天剑宗",
+      "quality": "epic",
+      "type": "patron_sect",
+      "weight": 8,
+      "desc": "邪物攻打天剑宗，你出手相助。",
+      "reward": { "patron_sect": "large" }
+    },
+    {
+      "id": "sect_large_2",
+      "name": "玄天宗被围困",
+      "quality": "epic",
+      "type": "patron_sect",
+      "weight": 8,
+      "desc": "玄天宗被邪物围困，你解围。",
+      "reward": { "patron_sect": "large" }
+    },
+    {
+      "id": "sect_large_3",
+      "name": "太虚门遭袭",
+      "quality": "epic",
+      "type": "patron_sect",
+      "weight": 8,
+      "desc": "太虚门遭袭，你出手。",
+      "reward": { "patron_sect": "large" }
+    },
+    {
+      "id": "sect_large_4",
+      "name": "万法宗遇邪物",
+      "quality": "epic",
+      "type": "patron_sect",
+      "weight": 8,
+      "desc": "万法宗遇邪物，你相助。",
+      "reward": { "patron_sect": "large" }
+    },
+    {
+      "id": "sect_large_5",
+      "name": "星辰阁被攻打",
+      "quality": "epic",
+      "type": "patron_sect",
+      "weight": 8,
+      "desc": "星辰阁被邪物攻打，你解围。",
+      "reward": { "patron_sect": "large" }
+    },
+
+    {
+      "id": "sect_super_1",
+      "name": "邪物攻打太一门",
+      "quality": "epic",
+      "type": "patron_sect",
+      "weight": 2,
+      "desc": "邪物攻打太一门，你出手相助。",
+      "reward": { "patron_sect": "super" }
+    },
+    {
+      "id": "sect_super_2",
+      "name": "无极宗被围困",
+      "quality": "epic",
+      "type": "patron_sect",
+      "weight": 2,
+      "desc": "无极宗被邪物围困，你解围。",
+      "reward": { "patron_sect": "super" }
+    },
+    {
+      "id": "sect_super_3",
+      "name": "道天宗遭袭",
+      "quality": "epic",
+      "type": "patron_sect",
+      "weight": 2,
+      "desc": "道天宗遭袭，你出手。",
+      "reward": { "patron_sect": "super" }
+    },
+
+    {
+      "id": "resource_herb_1",
+      "name": "路边灵草",
+      "quality": "common",
+      "type": "resource",
+      "weight": 6,
+      "desc": "你在路边发现一株十年灵草，顺手采下。",
+      "reward": { "item": { "id": "lingcao_10", "quantity": 1 } }
+    },
+    {
+      "id": "resource_herb_2",
+      "name": "崖边灵草",
+      "quality": "rare",
+      "type": "resource",
+      "weight": 6,
+      "desc": "崖边有一株百年灵草，你冒险采下。",
+      "reward": { "item": { "id": "lingcao_100", "quantity": 1 } }
+    },
+    {
+      "id": "resource_stone_1",
+      "name": "溪底灵石",
+      "quality": "common",
+      "type": "resource",
+      "weight": 8,
+      "desc": "溪底有微光，你捞起一枚下品灵石。",
+      "reward": { "stones": { "low": 10 } }
+    },
+    {
+      "id": "resource_stone_2",
+      "name": "山洞灵石",
+      "quality": "common",
+      "type": "resource",
+      "weight": 7,
+      "desc": "山洞中散落几枚灵石，你收入囊中。",
+      "reward": { "stones": { "low": 50 } }
+    },
+    {
+      "id": "resource_stone_3",
+      "name": "古修遗物",
+      "quality": "rare",
+      "type": "resource",
+      "weight": 6,
+      "desc": "你发现一处古修遗物，得到一些灵石。",
+      "reward": { "stones": { "mid": 5 } }
+    },
+    {
+      "id": "resource_pill_1",
+      "name": "遗落的丹药",
+      "quality": "common",
+      "type": "resource",
+      "weight": 6,
+      "desc": "你在路边捡到一瓶遗落的丹药。",
+      "reward": { "item": { "id": "juqi_san", "quantity": 1 } }
+    },
+    {
+      "id": "resource_pill_2",
+      "name": "破旧丹炉",
+      "quality": "common",
+      "type": "resource",
+      "weight": 5,
+      "desc": "破旧丹炉中残留几粒丹药。",
+      "reward": { "item": { "id": "juqi_san", "quantity": 2 } }
+    },
+    {
+      "id": "resource_chest_1",
+      "name": "古修洞府",
+      "quality": "common",
+      "type": "resource",
+      "weight": 5,
+      "desc": "你发现一处古修洞府，得到一些资源。",
+      "reward": { "stones": { "low": 100 } }
+    },
+    {
+      "id": "resource_chest_2",
+      "name": "秘境入口",
+      "quality": "rare",
+      "type": "resource",
+      "weight": 5,
+      "desc": "你发现一处秘境入口，进入后有所收获。",
+      "reward": { "stones": { "mid": 10 } }
+    },
+    {
+      "id": "resource_chest_3",
+      "name": "遗落储物袋",
+      "quality": "common",
+      "type": "resource",
+      "weight": 4,
+      "desc": "你捡到一个遗落的储物袋。",
+      "reward": { "stones": { "low": 200 } }
+    },
+    {
+      "id": "resource_spring_1",
+      "name": "灵泉",
+      "quality": "common",
+      "type": "resource",
+      "weight": 7,
+      "desc": "你发现一处灵泉，饮后神清气爽。",
+      "reward": { "stones": { "low": 30 } }
+    },
+    {
+      "id": "resource_mine_1",
+      "name": "废弃矿洞",
+      "quality": "common",
+      "type": "resource",
+      "weight": 6,
+      "desc": "废弃矿洞中还有些许灵石。",
+      "reward": { "stones": { "low": 80 } }
+    },
+
+    {
+      "id": "nothing_1",
+      "name": "一路畅通",
+      "quality": "common",
+      "type": "nothing",
+      "weight": 10,
+      "desc": "今日游历青山，一路畅通无阻，无事发生。",
+      "reward": null
+    },
+    {
+      "id": "nothing_2",
+      "name": "风和日丽",
+      "quality": "common",
+      "type": "nothing",
+      "weight": 10,
+      "desc": "今日游历碧水，风和日丽，无事发生。",
+      "reward": null
+    },
+    {
+      "id": "nothing_3",
+      "name": "云淡风轻",
+      "quality": "common",
+      "type": "nothing",
+      "weight": 10,
+      "desc": "今日游历白云山，云淡风轻，无事发生。",
+      "reward": null
+    },
+    {
+      "id": "nothing_4",
+      "name": "鸟语花香",
+      "quality": "common",
+      "type": "nothing",
+      "weight": 10,
+      "desc": "今日游历百花谷，鸟语花香，无事发生。",
+      "reward": null
+    },
+    {
+      "id": "nothing_5",
+      "name": "细雨绵绵",
+      "quality": "common",
+      "type": "nothing",
+      "weight": 10,
+      "desc": "今日游历细雨岭，细雨绵绵，无事发生。",
+      "reward": null
+    },
+    {
+      "id": "nothing_6",
+      "name": "落叶满径",
+      "quality": "common",
+      "type": "nothing",
+      "weight": 10,
+      "desc": "今日游历落叶林，落叶满径，无事发生。",
+      "reward": null
+    },
+    {
+      "id": "nothing_7",
+      "name": "溪水潺潺",
+      "quality": "common",
+      "type": "nothing",
+      "weight": 10,
+      "desc": "今日游历溪水涧，溪水潺潺，无事发生。",
+      "reward": null
+    },
+    {
+      "id": "nothing_8",
+      "name": "松涛阵阵",
+      "quality": "common",
+      "type": "nothing",
+      "weight": 10,
+      "desc": "今日游历松涛峰，松涛阵阵，无事发生。",
+      "reward": null
+    },
+    {
+      "id": "nothing_9",
+      "name": "晚霞满天",
+      "quality": "common",
+      "type": "nothing",
+      "weight": 10,
+      "desc": "今日游历晚霞岭，晚霞满天，无事发生。",
+      "reward": null
+    },
+    {
+      "id": "nothing_10",
+      "name": "星光点点",
+      "quality": "common",
+      "type": "nothing",
+      "weight": 10,
+      "desc": "今日游历星光谷，星光点点，无事发生。",
+      "reward": null
+    }
+  ]
+}

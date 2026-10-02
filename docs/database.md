@@ -7,16 +7,19 @@
 
 ## 一、表与职责
 
-| 表                    | 职责                         |
-| --------------------- | ---------------------------- |
-| users                 | 账号（实名年龄）             |
-| players               | 玩家角色状态（核心）         |
-| retreats              | 闭关记录                     |
-| reincarnation_records | 前世档案（转世/死亡时快照）  |
-| player_items          | 储物戒（物品堆叠，不含灵石） |
-| admin_users           | 后台管理员账号               |
-| admin_login_logs      | 后台登录、失败和锁定审计     |
-| admin_operation_logs  | 后台敏感操作审计             |
+| 表                    | 职责                            |
+| --------------------- | ------------------------------- |
+| users                 | 账号（实名年龄）                |
+| players               | 玩家角色状态（核心）            |
+| retreats              | 闭关记录                        |
+| reincarnation_records | 前世档案（转世/死亡时快照）     |
+| player_items          | 储物戒（物品堆叠，不含灵石）    |
+| travels               | 游历记录（进行中/已结算）       |
+| player_events         | 游历产出的待处理事件            |
+| player_patrons        | 庇护对象（凡人/宗门）与上供状态 |
+| admin_users           | 后台管理员账号                  |
+| admin_login_logs      | 后台登录、失败和锁定审计        |
+| admin_operation_logs  | 后台敏感操作审计                |
 
 > 玩家运行时状态与后台安全审计分开；后台表仅服务管理端，不参与游戏数值计算。
 
@@ -150,7 +153,68 @@
 
 ---
 
-## 七、后台管理表
+## 七、游历与庇护
+
+游历 / 事件 / 庇护的玩家运行时状态。数值（模式、槽位、事件表、材料、上供规格、名额上限）全部来自 `config/travel.json`、`config/travel_events.json`、`config/materials.json`、`config/patron.json`，本处只存状态。
+
+### travels（游历记录）
+
+| 字段       | 类型               | 说明                                     |
+| ---------- | ------------------ | ---------------------------------------- |
+| id         | BIGINT UNSIGNED PK | 自增                                     |
+| player_id  | BIGINT UNSIGNED    | 关联 players.id                          |
+| mode_id    | VARCHAR(16)        | 游历模式 id（对应 travel.json 的 modes） |
+| finish_at  | INT UNSIGNED       | 到期时间（秒）                           |
+| status     | TINYINT            | 0 进行中 / 1 已结算                      |
+| created_at | INT UNSIGNED       | 开始时间（秒）                           |
+
+**规则：**
+
+- 一名玩家同一时间最多一条 `status = 0` 的进行中游历
+- 游历不参与状态互斥（见 api.md），可与冥想/闭关并存
+
+### player_events（游历产出事件）
+
+| 字段        | 类型               | 说明                                         |
+| ----------- | ------------------ | -------------------------------------------- |
+| id          | BIGINT UNSIGNED PK | 自增                                         |
+| player_id   | BIGINT UNSIGNED    | 关联 players.id                              |
+| event_id    | VARCHAR(32)        | 事件 id（对应 travel_events.json 的 events） |
+| quality     | VARCHAR(16)        | 品质 common / rare / epic                    |
+| status      | TINYINT            | 0 待处理 / 1 已完成 / 2 已放弃/过期          |
+| created_at  | INT UNSIGNED       | 生成时间（秒）                               |
+| expire_at   | INT UNSIGNED       | 过期时间（秒）                               |
+| resolved_at | INT UNSIGNED NULL  | 处理时间（秒），未处理为 NULL                |
+
+**规则：**
+
+- 只有 `status = 0` 的待处理事件占事件槽；「无事发生」事件不落库、不占槽
+- 槽位上限来自 `travel.json` 的 `max_event_slots`；槽满时禁止游历，玩家可主动放弃旧事件腾出空位
+- 过期事件由服务端在读取时清理，不产出任何奖励
+
+### player_patrons（庇护对象）
+
+| 字段           | 类型               | 说明                                       |
+| -------------- | ------------------ | ------------------------------------------ |
+| id             | BIGINT UNSIGNED PK | 自增                                       |
+| player_id      | BIGINT UNSIGNED    | 关联 players.id                            |
+| kind           | VARCHAR(16)        | mortal（凡人）/ sect（宗门）               |
+| sect_level     | VARCHAR(16)        | 宗门等级 small / large / super；凡人为空串 |
+| count          | INT UNSIGNED       | 凡人数量（按数量累计）；宗门恒为 1         |
+| last_supply_at | INT UNSIGNED       | 上次结算时间（秒），用于按周期累积上供     |
+| created_at     | INT UNSIGNED       | 建立时间（秒）                             |
+| updated_at     | INT UNSIGNED       | 更新时间（秒）                             |
+
+**规则：**
+
+- 凡人与每级宗门各占一行：凡人一行累计 `count`，每个宗门庇护一行
+- 上供周期、每人/每宗门产出、累积上限来自 `patron.json`；超出累积上限的周期直接丢弃
+- 宗门名额上限按玩家大境界查 `patron.json` 的 `max_count_by_realm`；名额满时需解除一个才能庇护新的
+- 解除宗门庇护消耗商店道具「断缘令」（`config/shop.json`），解除后删除对应行
+
+---
+
+## 八、后台管理表
 
 ### admin_users（管理员账号）
 
@@ -186,15 +250,19 @@
 
 ---
 
-## 七、索引建议
+## 九、索引建议
 
 - `players.user_id` 建唯一索引（一个账号一个角色）
 - `retreats.player_id` + `retreats.status` 建联合索引
 - `reincarnation_records.user_id` + `reincarnation_records.life_no` 建唯一索引
+- `travels.player_id` + `travels.status` 建联合索引
+- `player_events.player_id` + `player_events.status` 建联合索引
+- `player_events.status` + `player_events.expire_at` 建联合索引（过期清理）
+- `player_patrons.player_id` + `player_patrons.kind` 建联合索引
 
 ---
 
-## 八、待定（雏形不含）
+## 十、待定（雏形不含）
 
 - 遗迹探索记录表
 - 排行榜表

@@ -15,7 +15,7 @@ use Webman\Http\Response;
 class AdminSpiritStoneService
 {
     // 单个品级一次发放的上限，防止误填超大值
-    private const MAX_GRANT_PER_LEVEL = 100000000;
+    private const MAX_GRANT_PER_LEVEL = 100000;
 
     public function grant(Request $request, int $playerId): Response
     {

@@ -1,70 +1,53 @@
 <template>
-  <section class="split-panel">
-    <aside class="config-list">
-      <div class="panel-title">
-        <span>JSON 配置</span>
-        <button class="icon-btn" type="button" :disabled="loading" @click="loadList">刷新</button>
+  <section class="content-column">
+    <div class="panel-title">
+      <div>
+        <span>{{ selectedLabel }}</span>
+        <small class="muted" v-if="detail">更新于 {{ formatTime(detail.updated_at) }}</small>
       </div>
-      <button
-        v-for="item in configs"
-        :key="item.name"
-        type="button"
-        class="config-item"
-        :class="{ active: item.name === selectedName }"
-        @click="selectConfig(item.name)"
-      >
-        <span>{{ item.name }}</span>
-        <small>{{ formatBytes(item.size) }}</small>
-      </button>
-      <p class="muted" v-if="!loading && configs.length === 0">没有可读取的配置文件。</p>
-    </aside>
-
-    <div class="content-column">
-      <div class="panel-title">
-        <div>
-          <span>{{ detail?.file || '配置详情' }}</span>
-          <small class="muted" v-if="detail">更新于 {{ formatTime(detail.updated_at) }}</small>
-        </div>
-        <div class="button-row">
-          <button type="button" :disabled="!detail || loading" @click="openSaveDialog">保存配置</button>
-        </div>
+      <div class="button-row">
+        <button class="icon-btn" type="button" :disabled="!config || loading" @click="reload">刷新</button>
+        <button type="button" :disabled="!detail || loading" @click="openSaveDialog">保存配置</button>
       </div>
-
-      <p class="notice">
-        保存会先做 JSON 与核心结构校验，自动备份当前文件，再用原子替换写入。配置修改按文件 mtime 热更新。
-      </p>
-
-      <textarea
-        v-model="content"
-        class="json-editor"
-        spellcheck="false"
-        :disabled="!detail || loading"
-        aria-label="配置 JSON 编辑器"
-      ></textarea>
-
-      <div class="backup-block">
-        <div class="panel-title small-title">
-          <span>最近备份</span>
-          <small class="muted">最多保留 20 份</small>
-        </div>
-        <p class="muted" v-if="backups.length === 0">暂无备份。</p>
-        <div v-for="backup in backups" :key="backup.name" class="backup-row">
-          <span>{{ backup.name }}</span>
-          <small>{{ formatBytes(backup.size) }} · {{ formatTime(backup.created_at) }}</small>
-          <button type="button" class="ghost-btn" @click="openRestoreDialog(backup.name)">恢复</button>
-        </div>
-      </div>
-
-      <p class="error" v-if="error">{{ error }}</p>
-      <p class="success" v-if="success">{{ success }}</p>
     </div>
+
+    <p class="notice">
+      保存会先做 JSON 与核心结构校验，自动备份当前文件，再用原子替换写入。配置修改按文件 mtime 热更新。
+    </p>
+
+    <textarea
+      v-model="content"
+      class="json-editor"
+      spellcheck="false"
+      :disabled="!detail || loading"
+      aria-label="配置 JSON 编辑器"
+    ></textarea>
+
+    <div class="backup-block">
+      <div class="panel-title small-title">
+        <span>最近备份</span>
+        <div class="button-row">
+          <small class="muted">最多保留 20 份</small>
+          <button class="icon-btn" type="button" :disabled="!config || loading" @click="reload">刷新</button>
+        </div>
+      </div>
+      <p class="muted" v-if="backups.length === 0">暂无备份。</p>
+      <div v-for="backup in backups" :key="backup.name" class="backup-row">
+        <span>{{ backup.name }}</span>
+        <small>{{ formatBytes(backup.size) }} · {{ formatTime(backup.created_at) }}</small>
+        <button type="button" class="ghost-btn" @click="openRestoreDialog(backup.name)">恢复</button>
+      </div>
+    </div>
+
+    <p class="error" v-if="error">{{ error }}</p>
+    <p class="success" v-if="success">{{ success }}</p>
   </section>
 
   <div class="modal-mask" v-if="dialog">
     <div class="modal">
       <h3>{{ dialogTitle }}</h3>
       <p class="muted">
-        {{ dialogAction === 'save' ? `即将写入 config/${selectedName}.json` : `即将恢复备份 ${selectedBackup}` }}
+        {{ dialogAction === 'save' ? `即将写入 config/${config}.json` : `即将恢复备份 ${selectedBackup}` }}
       </p>
       <label>
         当前管理员密码
@@ -85,13 +68,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { AdminApiError, api, type BackupItem, type ConfigDetail, type ConfigItem } from './api'
+import { computed, ref, watch } from 'vue'
+import { AdminApiError, api, type BackupItem, type ConfigDetail } from './api'
 
+const props = defineProps<{ config: string; configLabel?: string }>()
 const emit = defineEmits<{ unauthorized: [] }>()
 
-const configs = ref<ConfigItem[]>([])
-const selectedName = ref('')
 const detail = ref<ConfigDetail | null>(null)
 const content = ref('')
 const backups = ref<BackupItem[]>([])
@@ -106,6 +88,12 @@ const dialogReason = ref('')
 const selectedBackup = ref('')
 
 const dialogTitle = computed(() => (dialogAction.value === 'save' ? '确认保存配置' : '确认恢复配置'))
+
+// 配置标题：中文名（原文件名）· 未选中时回退
+const selectedLabel = computed(() => {
+  const name = props.configLabel || props.config || '配置详情'
+  return detail.value ? `${name}（${detail.value.file}）` : name
+})
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -124,29 +112,6 @@ function handleError(e: unknown) {
   error.value = e instanceof Error ? e.message : '请求失败'
 }
 
-async function loadList() {
-  loading.value = true
-  error.value = ''
-  try {
-    configs.value = (await api.configs()).configs
-    if (!selectedName.value && configs.value[0]) {
-      await selectConfig(configs.value[0].name)
-    } else if (selectedName.value && configs.value.some((item) => item.name === selectedName.value)) {
-      await loadDetail(selectedName.value)
-    }
-  } catch (e) {
-    handleError(e)
-  } finally {
-    loading.value = false
-  }
-}
-
-async function selectConfig(name: string) {
-  if (!name || name === selectedName.value && detail.value) return
-  selectedName.value = name
-  await loadDetail(name)
-}
-
 async function loadDetail(name: string) {
   loading.value = true
   error.value = ''
@@ -161,6 +126,12 @@ async function loadDetail(name: string) {
   } finally {
     loading.value = false
   }
+}
+
+// 刷新当前配置内容与备份列表
+async function reload() {
+  if (!props.config) return
+  await loadDetail(props.config)
 }
 
 function openSaveDialog() {
@@ -186,20 +157,20 @@ function closeDialog() {
 }
 
 async function submitDialog() {
-  if (!selectedName.value) return
+  if (!props.config) return
   busy.value = true
   error.value = ''
   success.value = ''
   try {
     if (dialogAction.value === 'save') {
-      await api.saveConfig(selectedName.value, {
+      await api.saveConfig(props.config, {
         content: content.value,
         password: dialogPassword.value,
         reason: dialogReason.value.trim(),
       })
       success.value = '配置已保存，游戏数值将在后续请求中按 mtime 自动重载。'
     } else {
-      await api.restoreConfig(selectedName.value, {
+      await api.restoreConfig(props.config, {
         backup: selectedBackup.value,
         password: dialogPassword.value,
         reason: dialogReason.value.trim(),
@@ -207,8 +178,7 @@ async function submitDialog() {
       success.value = '配置已从备份恢复。'
     }
     dialog.value = false
-    await loadDetail(selectedName.value)
-    await loadList()
+    await reload()
   } catch (e) {
     handleError(e)
   } finally {
@@ -216,5 +186,11 @@ async function submitDialog() {
   }
 }
 
-onMounted(loadList)
+watch(
+  () => props.config,
+  (name) => {
+    if (name) loadDetail(name)
+  },
+  { immediate: true }
+)
 </script>

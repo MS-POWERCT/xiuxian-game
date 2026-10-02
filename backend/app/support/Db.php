@@ -122,6 +122,38 @@ class Db
                 UNIQUE KEY uk_player_item (player_id, item_id),
                 KEY idx_player_category (player_id, category)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            "CREATE TABLE IF NOT EXISTS travels (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                player_id BIGINT UNSIGNED NOT NULL,
+                mode_id VARCHAR(16) NOT NULL,
+                finish_at INT UNSIGNED NOT NULL,
+                status TINYINT NOT NULL DEFAULT 0,
+                created_at INT UNSIGNED NOT NULL,
+                KEY idx_player_status (player_id, status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            "CREATE TABLE IF NOT EXISTS player_events (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                player_id BIGINT UNSIGNED NOT NULL,
+                event_id VARCHAR(32) NOT NULL,
+                quality VARCHAR(16) NOT NULL,
+                status TINYINT NOT NULL DEFAULT 0,
+                created_at INT UNSIGNED NOT NULL,
+                expire_at INT UNSIGNED NOT NULL,
+                resolved_at INT UNSIGNED NULL,
+                KEY idx_player_status (player_id, status),
+                KEY idx_expire (status, expire_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            "CREATE TABLE IF NOT EXISTS player_patrons (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                player_id BIGINT UNSIGNED NOT NULL,
+                kind VARCHAR(16) NOT NULL,
+                sect_level VARCHAR(16) NOT NULL DEFAULT '',
+                count INT UNSIGNED NOT NULL DEFAULT 0,
+                last_supply_at INT UNSIGNED NOT NULL,
+                created_at INT UNSIGNED NOT NULL,
+                updated_at INT UNSIGNED NOT NULL,
+                KEY idx_player_kind (player_id, kind)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             "CREATE TABLE IF NOT EXISTS admin_users (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(32) NOT NULL,

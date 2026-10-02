@@ -28,6 +28,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
 import { getReincarnationRecords, type ReincarnationRecord, type SpiritStones } from '@/api/game'
+import { deathReasonLabels } from '@/config'
 import { usePlayerStore } from '@/stores/player'
 
 const store = usePlayerStore()
@@ -58,14 +59,9 @@ function toggle(lifeNo: number) {
   open[lifeNo] = !open[lifeNo]
 }
 
-// death_reason 中文映射：lifespan=寿元耗尽、self=主动兵解、relic=遗迹陨落
-const REASON_TEXT: Record<ReincarnationRecord['death_reason'], string> = {
-  lifespan: '寿元耗尽',
-  self: '主动兵解',
-  relic: '遗迹陨落',
-}
+// death_reason 中文映射由 config/labels.json 统一维护
 function reasonText(reason: ReincarnationRecord['death_reason']): string {
-  return REASON_TEXT[reason] ?? reason
+  return deathReasonLabels[reason] ?? reason
 }
 
 // 四级灵石紧凑展示：下/中/上/极

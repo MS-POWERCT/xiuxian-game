@@ -16,6 +16,10 @@ class AdminConfigValidator
             'meditation' => self::meditation($data),
             'economy' => self::economy($data),
             'shop' => self::shop($data),
+            'travel' => self::travel($data),
+            'travel_events' => self::travelEvents($data),
+            'materials' => self::materials($data),
+            'patron' => self::patron($data),
             'audio' => self::audio($data),
             default => null,
         };
@@ -206,6 +210,133 @@ class AdminConfigValidator
             ) {
                 return 'shop.items 存在字段缺失或类型错误';
             }
+        }
+        return null;
+    }
+
+    private static function travel(array $data): ?string
+    {
+        if (empty($data['modes']) || !self::isList($data['modes'])) {
+            return 'travel.modes 必须是非空数组';
+        }
+        foreach ($data['modes'] as $mode) {
+            if (
+                !is_array($mode)
+                || empty($mode['id']) || !is_string($mode['id'])
+                || empty($mode['name']) || !is_string($mode['name'])
+                || !isset($mode['duration_minutes']) || !is_numeric($mode['duration_minutes']) || (int)$mode['duration_minutes'] < 1
+                || empty($mode['event_weights']) || !is_array($mode['event_weights'])
+            ) {
+                return 'travel.modes 存在字段缺失或类型错误';
+            }
+            foreach ($mode['event_weights'] as $weight) {
+                if (!is_numeric($weight) || (int)$weight < 0) {
+                    return 'travel.modes.event_weights 必须是非负数字';
+                }
+            }
+        }
+        if (!isset($data['max_event_slots']) || !is_numeric($data['max_event_slots']) || (int)$data['max_event_slots'] < 1) {
+            return 'travel.max_event_slots 必须为正整数';
+        }
+        if (!isset($data['event_expire_days']) || !is_numeric($data['event_expire_days']) || (int)$data['event_expire_days'] < 1) {
+            return 'travel.event_expire_days 必须为正整数';
+        }
+        return null;
+    }
+
+    // 游历事件库：id/name/quality/type 必填，weight 可选（缺省等权），reward 可为 null
+    private static function travelEvents(array $data): ?string
+    {
+        if (empty($data['events']) || !self::isList($data['events'])) {
+            return 'travel_events.events 必须是非空数组';
+        }
+        foreach ($data['events'] as $event) {
+            if (
+                !is_array($event)
+                || empty($event['id']) || !is_string($event['id'])
+                || empty($event['name']) || !is_string($event['name'])
+                || empty($event['quality']) || !is_string($event['quality'])
+                || empty($event['type']) || !is_string($event['type'])
+            ) {
+                return 'travel_events.events 存在字段缺失或类型错误';
+            }
+            if (isset($event['weight']) && (!is_numeric($event['weight']) || (int)$event['weight'] < 0)) {
+                return 'travel_events.events.weight 必须是非负数字';
+            }
+            if (isset($event['reward']) && !is_array($event['reward'])) {
+                return 'travel_events.events.reward 必须是对象或 null';
+            }
+        }
+        return null;
+    }
+
+    // 材料：id/name/category 均为非空字符串
+    private static function materials(array $data): ?string
+    {
+        if (empty($data['materials']) || !self::isList($data['materials'])) {
+            return 'materials.materials 必须是非空数组';
+        }
+        foreach ($data['materials'] as $material) {
+            if (
+                !is_array($material)
+                || empty($material['id']) || !is_string($material['id'])
+                || empty($material['name']) || !is_string($material['name'])
+                || empty($material['category']) || !is_string($material['category'])
+            ) {
+                return 'materials.materials 存在字段缺失或类型错误';
+            }
+        }
+        return null;
+    }
+
+    private static function patron(array $data): ?string
+    {
+        $mortal = $data['mortal'] ?? null;
+        if (
+            !is_array($mortal)
+            || !isset($mortal['max_count']) || !is_numeric($mortal['max_count']) || (int)$mortal['max_count'] < 0
+            || !isset($mortal['supply_interval_hours']) || !is_numeric($mortal['supply_interval_hours']) || (int)$mortal['supply_interval_hours'] < 1
+            || !isset($mortal['supply_per_capita_low']) || !is_numeric($mortal['supply_per_capita_low']) || (float)$mortal['supply_per_capita_low'] < 0
+            || !isset($mortal['max_accumulate']) || !is_numeric($mortal['max_accumulate']) || (int)$mortal['max_accumulate'] < 1
+        ) {
+            return 'patron.mortal 配置不完整';
+        }
+        $sect = $data['sect'] ?? null;
+        if (
+            !is_array($sect)
+            || empty($sect['max_count_by_realm']) || !is_array($sect['max_count_by_realm'])
+            || empty($sect['levels']) || !is_array($sect['levels'])
+        ) {
+            return 'patron.sect 配置不完整';
+        }
+        foreach ($sect['max_count_by_realm'] as $count) {
+            if (!is_numeric($count) || (int)$count < 0) {
+                return 'patron.sect.max_count_by_realm 必须是非负数字';
+            }
+        }
+        foreach ($sect['levels'] as $level) {
+            if (
+                !is_array($level)
+                || empty($level['name']) || !is_string($level['name'])
+                || !isset($level['supply_interval_hours']) || !is_numeric($level['supply_interval_hours']) || (int)$level['supply_interval_hours'] < 1
+                || empty($level['supply']) || !is_array($level['supply'])
+                || !isset($level['max_accumulate']) || !is_numeric($level['max_accumulate']) || (int)$level['max_accumulate'] < 1
+            ) {
+                return 'patron.sect.levels 存在字段缺失或类型错误';
+            }
+            foreach ($level['supply'] as $amount) {
+                if (!is_numeric($amount) || (int)$amount < 0) {
+                    return 'patron.sect.levels.supply 必须是非负数字';
+                }
+            }
+        }
+        $release = $data['release'] ?? null;
+        if (
+            !is_array($release)
+            || empty($release['item_id']) || !is_string($release['item_id'])
+            || empty($release['compensation_by_level']) || !is_array($release['compensation_by_level'])
+        ) {
+            return 'patron.release 配置不完整';
         }
         return null;
     }

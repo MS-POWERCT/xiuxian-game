@@ -8,6 +8,9 @@ import unlockJson from '@config/unlock.json'
 import audioJson from '@config/audio.json'
 import economyJson from '@config/economy.json'
 import shopJson from '@config/shop.json'
+import travelJson from '@config/travel.json'
+import patronJson from '@config/patron.json'
+import labelsJson from '@config/labels.json'
 
 export interface Realm {
   id: string
@@ -102,6 +105,78 @@ export const economyConfig = economyJson as unknown as {
   exchange_fee_ratio: Record<string, number>
 }
 export const shopConfig = shopJson as unknown as { items: ShopItemConfig[] }
+
+// ==================== 游历 / 庇护 ====================
+
+export interface TravelModeConfig {
+  id: string
+  name: string
+  method: string
+  duration_minutes: number
+  event_weights: Record<string, number>
+}
+
+export const travelConfig = travelJson as unknown as {
+  modes: TravelModeConfig[]
+  max_event_slots: number
+  event_expire_days: number
+}
+
+export interface PatronConfig {
+  mortal: {
+    max_count: number
+    supply_interval_hours: number
+    supply_per_capita_low: number
+    max_accumulate: number
+  }
+  sect: {
+    max_count_by_realm: Record<string, number>
+    levels: Record<
+      string,
+      {
+        name: string
+        supply_interval_hours: number
+        supply: Record<string, number>
+        max_accumulate: number
+      }
+    >
+  }
+  release: {
+    item_id: string
+    compensation_by_level: Record<string, number>
+  }
+}
+
+export const patronConfig = patronJson as unknown as PatronConfig
+
+// ==================== 中文文案映射（config/labels.json，前后端共用） ====================
+
+const labelsConfig = labelsJson as unknown as {
+  config_names: Record<string, string>
+  enums: Record<string, Record<string, string>>
+}
+
+// 配置文件 → 中文名（后台配置列表展示）
+export const configLabels = labelsConfig.config_names
+
+// 枚举值 → 中文名（标签分组见 labels.json 的 enums）
+export function enumLabel(group: string, value: string): string {
+  return labelsConfig.enums[group]?.[value] ?? value
+}
+
+// 物品分类 / 事件品质 / 庇护类型 / 宗门等级 / 死亡原因的中文映射
+export const categoryLabels: Record<string, string> = labelsConfig.enums.category ?? {}
+export const qualityLabels: Record<string, string> = labelsConfig.enums.quality ?? {}
+export const patronKindLabels: Record<string, string> = labelsConfig.enums.patron_kind ?? {}
+export const sectLevelLabels: Record<string, string> = labelsConfig.enums.sect_level ?? {}
+export const deathReasonLabels: Record<string, string> = labelsConfig.enums.death_reason ?? {}
+
+// 游历事件品质中文名（与 qualityLabels 同源）
+export const eventQualityLabels: Record<string, string> = qualityLabels
+
+// 赶路方式 / 事件类型中文名
+export const travelMethodLabels: Record<string, string> = labelsConfig.enums.travel_method ?? {}
+export const eventTypeLabels: Record<string, string> = labelsConfig.enums.event_type ?? {}
 
 // 灵石品级中文名（展示用文案，取自设计文档「下品/中品/上品/极品」）
 export const spiritStoneLabels: Record<string, string> = {
